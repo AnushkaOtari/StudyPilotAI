@@ -2,39 +2,106 @@ import { useState } from "react";
 
 function App() {
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const askQuestion = async () => {
-    const response = await fetch(
-      "http://127.0.0.1:8000/ask",
+    if (!question.trim()) return;
+
+    const userQuestion = question;
+
+    setMessages((prev) => [
+      ...prev,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+        role: "user",
+        text: userQuestion,
+      },
+    ]);
+
+    setQuestion("");
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/ask",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            question: userQuestion,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: data.answer,
         },
-        body: JSON.stringify({
-          question: question,
-        }),
-      }
-    );
+      ]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: "Something went wrong.",
+        },
+      ]);
+    }
 
-    const data = await response.json();
-
-    setAnswer(data.answer);
+    setLoading(false);
   };
 
   return (
     <div
       style={{
-        maxWidth: "800px",
-        margin: "50px auto",
+        maxWidth: "900px",
+        margin: "20px auto",
         padding: "20px",
       }}
     >
-      <h1>StudyPilot AI</h1>
+      <h1>🎓 StudyPilot AI</h1>
+
+      <div
+        style={{
+          border: "1px solid #ccc",
+          borderRadius: "10px",
+          padding: "20px",
+          minHeight: "400px",
+          marginBottom: "20px",
+        }}
+      >
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            style={{
+              marginBottom: "15px",
+            }}
+          >
+            <strong>
+              {msg.role === "user"
+                ? "You"
+                : "StudyPilot"}
+            </strong>
+
+            <p>{msg.text}</p>
+          </div>
+        ))}
+
+        {loading && (
+          <p>
+            <strong>StudyPilot:</strong> Thinking...
+          </p>
+        )}
+      </div>
 
       <textarea
-        rows="4"
+        rows="3"
         style={{
           width: "100%",
           padding: "10px",
@@ -52,18 +119,6 @@ function App() {
       <button onClick={askQuestion}>
         Ask
       </button>
-
-      <div
-        style={{
-          marginTop: "30px",
-          padding: "20px",
-          border: "1px solid gray",
-        }}
-      >
-        <h3>Answer</h3>
-
-        <p>{answer}</p>
-      </div>
     </div>
   );
 }
