@@ -1,28 +1,41 @@
-from google import genai
-from dotenv import load_dotenv
-import os
+import ollama
 
-load_dotenv()
-
-client = genai.Client(
-    api_key=os.getenv("GOOGLE_API_KEY")
-)
 
 def answer_question(question, context):
 
     prompt = f"""
-Answer ONLY using the context below.
+You are StudyPilot AI.
+
+Answer ONLY from the provided context.
+
+If the answer is not present in the context,
+reply:
+
+"I couldn't find this information in the uploaded notes."
+
+Rules:
+- Simple English
+- Do not use markdown
+- Keep answer concise
+- Do not invent information
 
 Context:
 {context}
 
 Question:
 {question}
+
+Answer:
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
+    response = ollama.chat(
+        model="llama3.2",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
     )
 
-    return response.text
+    return response["message"]["content"]

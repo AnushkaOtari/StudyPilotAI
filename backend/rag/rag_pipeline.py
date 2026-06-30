@@ -4,27 +4,45 @@ from rag.embedder import get_embedding
 from rag.vector_store import VectorStore
 from rag.qa import answer_question
 
-print("Loading StudyPilot knowledge base...")
+store = None
 
-text = extract_text("test.pdf")
 
-chunks = chunk_text(text)
+def load_pdf(pdf_path):
 
-embeddings = [
-    get_embedding(chunk)
-    for chunk in chunks
-]
+    global store
 
-store = VectorStore(
-    len(embeddings[0])
-)
+    print("Loading StudyPilot knowledge base...")
 
-store.add(
-    embeddings,
-    chunks
-)
+    text = extract_text(pdf_path)
 
-print("Knowledge base loaded!")
+    print("Text Length:", len(text))
+    print(text[:500])
+
+    chunks = chunk_text(text)
+
+    print("Chunks:", len(chunks))
+
+    embeddings = [
+        get_embedding(chunk)
+        for chunk in chunks
+    ]
+
+    print("Embeddings:", len(embeddings))
+
+    store = VectorStore(
+        len(embeddings[0])
+    )
+
+    store.add(
+        embeddings,
+        chunks
+    )
+
+    print("Knowledge base loaded!")
+
+
+# load_pdf("test.pdf")
+
 
 def ask_rag(question):
 
@@ -35,6 +53,10 @@ def ask_rag(question):
     results = store.search(
         query_embedding
     )
+
+    print("\n===== RETRIEVED CHUNKS =====")
+    print(results)
+    print("============================\n")
 
     context = "\n".join(results)
 

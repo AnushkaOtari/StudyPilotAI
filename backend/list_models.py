@@ -8,9 +8,7 @@ client = genai.Client(
     api_key=os.getenv("GOOGLE_API_KEY")
 )
 
-response = client.models.generate_content(
-    model="gemini-2.0-flash",
-    contents="Say hello"
-)
+models = client.models.list()
 
-print(response.text)
+for model in models:
+    print(model.name)

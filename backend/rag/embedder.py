@@ -1,18 +1,13 @@
-from google import genai
-from dotenv import load_dotenv
-import os
+from sentence_transformers import SentenceTransformer
 
-load_dotenv()
-
-client = genai.Client(
-    api_key=os.getenv("GOOGLE_API_KEY")
+model = SentenceTransformer(
+    "all-MiniLM-L6-v2"
 )
 
 def get_embedding(text):
 
-    response = client.models.embed_content(
-        model="gemini-embedding-001",
-        contents=text
+    embedding = model.encode(
+        text
     )
 
-    return response.embeddings[0].values
+    return embedding.tolist()
