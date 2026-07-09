@@ -43,16 +43,18 @@ def load_pdf(pdf_path):
 
 # load_pdf("test.pdf")
 
-
 def ask_rag(question):
 
-    query_embedding = get_embedding(
-        question
-    )
+    global store
 
-    results = store.search(
-        query_embedding
-    )
+    if store is None:
+        return "No PDF has been uploaded yet. Please upload a PDF first."
+
+    query_embedding = get_embedding(question)
+
+    print("Store:", store)
+
+    results = store.search(query_embedding)
 
     print("\n===== RETRIEVED CHUNKS =====")
     print(results)
