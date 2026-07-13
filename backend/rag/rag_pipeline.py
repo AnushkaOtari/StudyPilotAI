@@ -1,3 +1,5 @@
+import time
+
 from rag.pdf_reader import extract_text
 from rag.chunker import chunk_text
 from rag.embedder import get_embedding
@@ -5,18 +7,19 @@ from rag.vector_store import VectorStore
 from rag.qa import answer_question
 
 store = None
+chat_history = []
 
 
 def load_pdf(pdf_path):
 
     global store
+    global chat_history
 
     print("Loading StudyPilot knowledge base...")
 
     text = extract_text(pdf_path)
 
     print("Text Length:", len(text))
-    print(text[:500])
 
     chunks = chunk_text(text)
 
@@ -38,33 +41,88 @@ def load_pdf(pdf_path):
         chunks
     )
 
+    chat_history = []
+
     print("Knowledge base loaded!")
 
-
-# load_pdf("test.pdf")
 
 def ask_rag(question):
 
     global store
+    global chat_history
 
     if store is None:
-        return "No PDF has been uploaded yet. Please upload a PDF first."
+        return "Please upload a PDF first."
+
+    total_start = time.time()
+
+    # ---------------- Embedding ---------------- #
+
+    start = time.time()
 
     query_embedding = get_embedding(question)
 
-    print("Store:", store)
+    print(f"Embedding Time : {time.time()-start:.2f} sec")
 
-    results = store.search(query_embedding)
+    # ---------------- Retrieval ---------------- #
 
-    print("\n===== RETRIEVED CHUNKS =====")
-    print(results)
-    print("============================\n")
+    start = time.time()
+
+    results = store.search(
+        query_embedding,
+        k=2
+    )
+
+    print(f"Retrieval Time : {time.time()-start:.2f} sec")
 
     context = "\n".join(results)
 
+    # ---------------- Mode Detection ---------------- #
+
+    question_lower = question.lower()
+
+    if any(word in question_lower for word in [
+        "what is",
+        "define",
+        "meaning of",
+        "who is"
+    ]):
+        mode = "short"
+
+    elif any(word in question_lower for word in [
+        "explain",
+        "describe",
+        "detail",
+        "elaborate"
+    ]):
+        mode = "detailed"
+
+    else:
+        mode = "normal"
+
+    # ---------------- LLM ---------------- #
+
+    start = time.time()
+
     answer = answer_question(
         question,
-        context
+        context,
+        chat_history,
+        mode
     )
+
+    print(f"LLM Time : {time.time()-start:.2f} sec")
+
+    chat_history.append(
+        {
+            "question": question,
+            "answer": answer
+        }
+    )
+
+    if len(chat_history) > 5:
+        chat_history.pop(0)
+
+    print(f"TOTAL TIME : {time.time()-total_start:.2f} sec")
 
     return answer

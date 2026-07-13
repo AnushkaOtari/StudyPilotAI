@@ -1,10 +1,53 @@
 import { useState } from "react";
+import "./App.css";
+
+import Header from "./components/Header";
+import UploadBox from "./components/UploadBox";
+import ChatBox from "./components/ChatBox";
+import ChatInput from "./components/ChatInput";
 
 function App() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const [file, setFile] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  // Upload PDF
+  const uploadPdf = async () => {
+    if (!file) {
+      alert("Please select a PDF first.");
+      return;
+    }
+
+    setUploading(true);
+    setUploadStatus("Uploading PDF...");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      setUploadStatus(data.message);
+    } catch (error) {
+      setUploadStatus("Upload failed.");
+    }
+
+    setUploading(false);
+  };
+
+  // Ask Question
   const askQuestion = async () => {
     if (!question.trim()) return;
 
@@ -58,67 +101,29 @@ function App() {
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "900px",
-        margin: "20px auto",
-        padding: "20px",
-      }}
-    >
-      <h1>🎓 StudyPilot AI</h1>
+    <div className="app">
 
-      <div
-        style={{
-          border: "1px solid #ccc",
-          borderRadius: "10px",
-          padding: "20px",
-          minHeight: "400px",
-          marginBottom: "20px",
-        }}
-      >
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            style={{
-              marginBottom: "15px",
-            }}
-          >
-            <strong>
-              {msg.role === "user"
-                ? "You"
-                : "StudyPilot"}
-            </strong>
+      <Header />
 
-            <p>{msg.text}</p>
-          </div>
-        ))}
-
-        {loading && (
-          <p>
-            <strong>StudyPilot:</strong> Thinking...
-          </p>
-        )}
-      </div>
-
-      <textarea
-        rows="3"
-        style={{
-          width: "100%",
-          padding: "10px",
-        }}
-        placeholder="Ask a question..."
-        value={question}
-        onChange={(e) =>
-          setQuestion(e.target.value)
-        }
+      <UploadBox
+        file={file}
+        setFile={setFile}
+        uploadPdf={uploadPdf}
+        uploadStatus={uploadStatus}
+        uploading={uploading}
       />
 
-      <br />
-      <br />
+      <ChatBox
+        messages={messages}
+        loading={loading}
+      />
 
-      <button onClick={askQuestion}>
-        Ask
-      </button>
+      <ChatInput
+        question={question}
+        setQuestion={setQuestion}
+        askQuestion={askQuestion}
+      />
+
     </div>
   );
 }

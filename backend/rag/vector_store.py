@@ -15,7 +15,7 @@ class VectorStore:
 
         self.chunks.extend(chunks)
 
-    def search(self, query_embedding, k=3):
+    def search(self, query_embedding, k=5):
 
         query_vector = np.array(
             [query_embedding]
