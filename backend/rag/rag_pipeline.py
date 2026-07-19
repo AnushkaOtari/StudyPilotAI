@@ -1,6 +1,7 @@
+import os
 import time
 
-from rag.pdf_reader import extract_text
+from rag.pdf_reader import extract_text, extract_text_by_page
 from rag.chunker import chunk_text
 from rag.embedder import get_embedding
 from rag.vector_store import VectorStore
@@ -11,48 +12,73 @@ chat_history = []
 
 
 def load_pdf(pdf_path):
+    
 
     global store
     global chat_history
+    print("Store Before:", store)
 
     print("Loading StudyPilot knowledge base...")
 
-    text = extract_text(pdf_path)
+    pages = extract_text_by_page(pdf_path)
+    print("Pages Extracted:", len(pages))
 
-    print("Text Length:", len(text))
+    chunks_with_metadata = []
+    for page_num, page_text in pages:
+        page_chunks = chunk_text(page_text)
+        for chunk in page_chunks:
+            chunks_with_metadata.append({
+                "text": chunk,
+                "source": os.path.basename(pdf_path),
+                "page": page_num
+            })
 
-    chunks = chunk_text(text)
-
-    print("Chunks:", len(chunks))
+    print("Chunks:", len(chunks_with_metadata))
+    if len(chunks_with_metadata) == 0:
+        print(f"No readable text found in {pdf_path}")
+        return
 
     embeddings = [
-        get_embedding(chunk)
-        for chunk in chunks
+        get_embedding(item["text"])
+        for item in chunks_with_metadata
     ]
+
+    if len(embeddings) == 0:
+        print(f"No embeddings generated for {pdf_path}")
+        return
 
     print("Embeddings:", len(embeddings))
 
-    store = VectorStore(
-        len(embeddings[0])
-    )
+    
+    if store is None:
 
+        store = VectorStore(
+            len(embeddings[0])
+        )
+
+    
     store.add(
         embeddings,
-        chunks
+        chunks_with_metadata,
+        pdf_path
     )
 
     chat_history = []
 
     print("Knowledge base loaded!")
 
+    print("Store After:", store)
 
-def ask_rag(question):
+def ask_rag(question, filename=None):
 
     global store
     global chat_history
 
     if store is None:
-        return "Please upload a PDF first."
+        return {
+            "answer": "Please upload a PDF first.",
+            "sources": []
+        }
 
     total_start = time.time()
 
@@ -68,15 +94,27 @@ def ask_rag(question):
 
     start = time.time()
 
-    results = store.search(
-        query_embedding,
-        k=2
-    )
+    if filename:
+        # Retrieve more matches to filter by filename
+        results = store.search(
+            query_embedding,
+            k=20
+        )
+        # Filter results where doc["source"] matches filename
+        results = [doc for doc in results if doc["source"].replace("\\", "/").endswith(filename)]
+        results = results[:2]
+    else:
+        results = store.search(
+            query_embedding,
+            k=8
+        )
 
     print(f"Retrieval Time : {time.time()-start:.2f} sec")
 
-    context = "\n".join(results)
-
+    context = "\n\n".join(
+        f"Source: {doc['source']} (Page {doc['page']})\n{doc['text']}"
+        for doc in results
+    )
     # ---------------- Mode Detection ---------------- #
 
     question_lower = question.lower()
@@ -125,4 +163,33 @@ def ask_rag(question):
 
     print(f"TOTAL TIME : {time.time()-total_start:.2f} sec")
 
-    return answer
+    sources = list(
+        set(
+        [doc["source"] for doc in results]
+        )
+    )
+    
+    return {
+    "answer": answer,
+    "sources": sources
+    }
+
+def delete_pdf_and_rebuild(filename, upload_folder):
+    global store
+    global chat_history
+
+    file_path = os.path.join(upload_folder, filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        print(f"Deleted file {file_path} from disk.")
+
+    # Reset store
+    store = None
+    chat_history = []
+
+    # Re-index all remaining files
+    if os.path.exists(upload_folder):
+        for fname in os.listdir(upload_folder):
+            if fname.lower().endswith(".pdf"):
+                full_path = os.path.join(upload_folder, fname)
+                load_pdf(full_path)

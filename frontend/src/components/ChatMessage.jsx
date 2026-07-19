@@ -1,19 +1,32 @@
-function ChatMessage({ role, text }) {
-  return (
-    <div
-      className={
-        role === "user"
-          ? "user-message"
-          : "ai-message"
-      }
-    >
-      <strong>
-        {role === "user"
-          ? "👤 You"
-          : "🤖 StudyPilot"}
-      </strong>
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 
-      <p>{text}</p>
+import "highlight.js/styles/github-dark.css";
+
+function ChatMessage({ role, text }) {
+  const isUser = role === "user";
+
+  return (
+    <div className={`message-wrapper ${isUser ? "user" : "assistant"}`}>
+      <div
+        className={`chat-message ${
+          isUser ? "user-message" : "ai-message"
+        }`}
+      >
+        <div className="message-sender">
+          {isUser ? "👤 You" : "🤖 StudyPilot"}
+        </div>
+
+        <div className="markdown-content">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
+          >
+            {text}
+          </ReactMarkdown>
+        </div>
+      </div>
     </div>
   );
 }

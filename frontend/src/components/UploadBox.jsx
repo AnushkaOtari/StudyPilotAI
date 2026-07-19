@@ -1,3 +1,5 @@
+import { Upload, FileText, Loader } from "lucide-react";
+
 function UploadBox({
   file,
   setFile,
@@ -6,39 +8,48 @@ function UploadBox({
   uploading,
 }) {
   return (
-    <div className="upload-box">
-
-      <h2>Upload Study Notes</h2>
-
+    <div className="upload-box animate-fade-in">
+      <h2>Upload Study Materials</h2>
       <p>
-        Upload your PDF and StudyPilot will build an AI knowledge base.
+        Add your lecture slides, notes, or textbook chapters (PDFs) to start querying them.
       </p>
 
       <div className="button-group">
-
         <label className="file-picker">
-          Choose PDF
+          <FileText size={16} style={{ marginRight: "8px" }} />
+          {file ? "Change PDF" : "Choose PDF"}
           <input
             type="file"
             accept=".pdf"
             hidden
             onChange={(e) => setFile(e.target.files[0])}
+            disabled={uploading}
           />
         </label>
 
         <button
           className="upload-btn"
           onClick={uploadPdf}
-          disabled={uploading}
+          disabled={uploading || !file}
         >
-          {uploading ? "Uploading..." : "Upload PDF"}
+          {uploading ? (
+            <>
+              <Loader className="animate-spin" size={16} style={{ marginRight: "8px" }} />
+              Indexing...
+            </>
+          ) : (
+            <>
+              <Upload size={16} style={{ marginRight: "8px" }} />
+              Build Base
+            </>
+          )}
         </button>
-
       </div>
 
       {file && (
         <div className="selected-file">
-          📄 {file.name}
+          <FileText size={14} />
+          <span>{file.name}</span>
         </div>
       )}
 
@@ -47,7 +58,6 @@ function UploadBox({
           {uploadStatus}
         </div>
       )}
-
     </div>
   );
 }

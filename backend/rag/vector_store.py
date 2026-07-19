@@ -1,19 +1,32 @@
 import faiss
 import numpy as np
 
+
 class VectorStore:
 
     def __init__(self, dimension):
         self.index = faiss.IndexFlatL2(dimension)
-        self.chunks = []
+        self.documents = []
 
-    def add(self, embeddings, chunks):
+    def add(self, embeddings, chunks, source=None):
 
         vectors = np.array(embeddings).astype("float32")
 
         self.index.add(vectors)
 
-        self.chunks.extend(chunks)
+        for chunk in chunks:
+            if isinstance(chunk, dict):
+                self.documents.append({
+                    "text": chunk.get("text", ""),
+                    "source": chunk.get("source", source),
+                    "page": chunk.get("page", 1)
+                })
+            else:
+                self.documents.append({
+                    "text": chunk,
+                    "source": source or "Unknown",
+                    "page": 1
+                })
 
     def search(self, query_embedding, k=5):
 
@@ -29,9 +42,10 @@ class VectorStore:
         results = []
 
         for idx in indices[0]:
-            if idx < len(self.chunks):
+
+            if idx < len(self.documents):
                 results.append(
-                    self.chunks[idx]
+                    self.documents[idx]
                 )
 
         return results
