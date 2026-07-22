@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+sqlalchemy
+passlib[bcrypt]
+python-jose[cryptography]
+alembic
+python-multipart
+email-validator
+python-dotenv
+google-genai
+faiss-cpu
+numpy
+sentence-transformers
+langchain-text-splitters
+pymupdf

@@ -2,11 +2,13 @@ import os
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-
 from models import QuestionRequest
 from rag.rag_pipeline import ask_rag, load_pdf, delete_pdf_and_rebuild
+from auth.router import router as auth_router
 
 app = FastAPI()
+
+app.include_router(auth_router)
 
 app.add_middleware(
     CORSMiddleware,
