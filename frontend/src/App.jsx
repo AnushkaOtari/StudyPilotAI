@@ -1,17 +1,50 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import StudyPilot from "./pages/StudyPilot";
+import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
+import StudyPilot from "./pages/StudyPilot.jsx";
 
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { useAuth } from "./hooks/useAuth";
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          background: "#0B1120",
+          color: "#F8FAFC",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "15px",
+          }}
+        >
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              border: "3px solid #1F2937",
+              borderTop: "3px solid #2563EB",
+              borderRadius: "50%",
+              animation: "spin 0.9s linear infinite",
+            }}
+          />
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
   }
 
   return (

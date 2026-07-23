@@ -1,4 +1,5 @@
 import { Send } from "lucide-react";
+import "./ChatInput.css";
 
 function ChatInput({
   question,

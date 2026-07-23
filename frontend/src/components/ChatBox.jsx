@@ -1,11 +1,9 @@
 import { useEffect, useRef } from "react";
 import ChatMessage from "./ChatMessage";
 import { BookOpen } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
 
-import "highlight.js/styles/github-dark.css";
+import "./ChatBox.css";
+
 function ChatBox({ messages = [], loading }) {
   const messagesEndRef = useRef(null);
 

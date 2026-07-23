@@ -3,6 +3,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 
 import "highlight.js/styles/github-dark.css";
+import "./ChatBox.css";
 
 function ChatMessage({ role, text }) {
   const isUser = role === "user";

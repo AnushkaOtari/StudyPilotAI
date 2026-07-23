@@ -1,26 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lexend:wght@500;600;700;800&display=swap');
+
 :root {
-  /* Premium Dark Theme Color Palette */
-  --bg-main: #0B1120;       /* Darkest slate-blue background */
-  --bg-sidebar: #060913;    /* Even darker sidebar for visual depth */
-  --bg-card: #111827;       /* Standard panel card color */
-  --bg-card-hover: #1E293B; /* Active or hovered item background */
-  --accent: #2563EB;        /* Primary accent blue */
-  --accent-hover: #1D4ED8;  /* Hover state for accent blue */
-  --accent-glow: rgba(37, 99, 235, 0.15); /* Soft outer glow */
-  --text-main: #F8FAFC;     /* Off-white readable text */
-  --text-muted: #94A3B8;    /* Muted text for descriptions/subtitles */
-  --border-color: #1F2937;  /* Clean thin borders */
+  /* ---------------- Premium Dark Theme Color Palette ---------------- */
+  --bg-main: #0B1120;         /* Darkest slate-blue background */
+  --bg-sidebar: #0A0F1D;      /* Slightly deeper sidebar/header for visual depth */
+  --bg-card: #111827;         /* Standard panel/card color */
+  --bg-card-alt: #0F172A;     /* Inset surfaces (inputs, chips) */
+  --bg-card-hover: #1A2333;   /* Hovered card surface */
+  --bg-hover: rgba(148, 163, 184, 0.08); /* Generic subtle hover wash */
+
+  --accent: #2563EB;          /* Primary accent blue */
+  --accent-hover: #1D4ED8;    /* Hover state for accent blue */
+  --accent-light: #60A5FA;    /* Light accent for text/links */
+  --accent-glow: rgba(37, 99, 235, 0.18); /* Soft outer glow */
+
+  --text-main: #F8FAFC;       /* Off-white readable text */
+  --text-muted: #94A3B8;      /* Muted text for descriptions/subtitles */
+  --text-faint: #64748B;      /* Even quieter text */
+
+  --border-color: #1F2937;    /* Clean thin borders */
+  --border-color-light: rgba(255, 255, 255, 0.08);
+  --danger: #EF4444;
+
   --scrollbar-thumb: #374151; /* Custom scrollbar color */
 
-  /* Typography */
+  /* ---------------- Shape & Elevation ---------------- */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 8px 24px rgba(37, 99, 235, 0.28);
+
+  /* ---------------- Typography ---------------- */
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Lexend', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   font-family: var(--font-sans);
   color-scheme: dark;
   background-color: var(--bg-main);
   color: var(--text-main);
-  
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -33,6 +57,10 @@
 
 body {
   background-color: var(--bg-main);
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(37, 99, 235, 0.10), transparent 42%),
+    radial-gradient(circle at 88% 92%, rgba(37, 99, 235, 0.06), transparent 45%);
+  background-attachment: fixed;
   color: var(--text-main);
   font-family: var(--font-sans);
   overflow: hidden;
@@ -48,7 +76,22 @@ body {
   overflow: hidden;
 }
 
-/* Custom Scrollbars */
+button, input, textarea {
+  font-family: inherit;
+}
+
+/* Accessible focus ring, respected across interactive elements */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent-light);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------------- Custom Scrollbars ---------------- */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -67,14 +110,10 @@ body {
   background: #4B5563;
 }
 
-/* Keyframes for animations */
+/* ---------------- Keyframes ---------------- */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
@@ -99,10 +138,26 @@ body {
   }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

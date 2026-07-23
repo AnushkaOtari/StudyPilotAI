@@ -1,0 +1,186 @@
+.upload-box {
+  position: relative;
+  background: linear-gradient(180deg, var(--bg-card) 0%, rgba(17, 24, 39, 0.7) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 30px 32px;
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.upload-box.drag-active {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.1) 0%, rgba(17, 24, 39, 0.7) 100%);
+  box-shadow: 0 0 0 4px var(--accent-glow), var(--shadow-md);
+}
+
+.upload-box-top {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.upload-icon-wrap {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  color: var(--accent-light);
+  transition: transform 0.25s ease;
+}
+
+.upload-box.drag-active .upload-icon-wrap {
+  transform: scale(1.08);
+}
+
+.upload-box-copy h2 {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.upload-box-copy p {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.upload-dropzone {
+  margin-top: 22px;
+  border: 1.5px dashed var(--border-color-light);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upload-box.drag-active .upload-dropzone {
+  border-color: var(--accent);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.file-picker {
+  height: 46px;
+  padding: 0 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  color: var(--accent-light);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.file-picker:hover {
+  background: var(--accent);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+}
+
+.upload-btn {
+  height: 46px;
+  padding: 0 22px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.upload-hint {
+  width: 100%;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.selected-file {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--accent-light);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.selected-file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-status {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--accent-light);
+}
+
+.upload-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .upload-box-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
