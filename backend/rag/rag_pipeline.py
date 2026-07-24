@@ -69,6 +69,35 @@ def load_pdf(pdf_path):
 
     print("Store After:", store)
 
+def retrieve_context(query, filename=None, k=8):
+
+    global store
+
+    if store is None:
+        return ""
+
+    query_embedding = get_embedding(query)
+
+    if filename:
+        results = store.search(query_embedding, k=20)
+        results = [
+            doc for doc in results
+            if doc["source"].replace("\\", "/").endswith(filename)
+        ]
+        results = results[:k]
+
+    else:
+        results = store.search(query_embedding, k=k)
+
+    context = "\n\n".join(
+        f"Source: {doc['source']} (Page {doc['page']})\n{doc['text']}"
+        for doc in results
+    )
+
+    return context,results
+
+
+
 def ask_rag(question, filename=None):
 
     global store
@@ -82,39 +111,15 @@ def ask_rag(question, filename=None):
 
     total_start = time.time()
 
-    # ---------------- Embedding ---------------- #
-
+    
     start = time.time()
-
-    query_embedding = get_embedding(question)
-
-    print(f"Embedding Time : {time.time()-start:.2f} sec")
-
-    # ---------------- Retrieval ---------------- #
-
-    start = time.time()
-
-    if filename:
-        # Retrieve more matches to filter by filename
-        results = store.search(
-            query_embedding,
-            k=20
-        )
-        # Filter results where doc["source"] matches filename
-        results = [doc for doc in results if doc["source"].replace("\\", "/").endswith(filename)]
-        results = results[:2]
-    else:
-        results = store.search(
-            query_embedding,
-            k=8
-        )
+    context, results = retrieve_context(
+    query=question,
+    filename=filename,
+    k=2 if filename else 8
+    )
 
     print(f"Retrieval Time : {time.time()-start:.2f} sec")
-
-    context = "\n\n".join(
-        f"Source: {doc['source']} (Page {doc['page']})\n{doc['text']}"
-        for doc in results
-    )
     # ---------------- Mode Detection ---------------- #
 
     question_lower = question.lower()

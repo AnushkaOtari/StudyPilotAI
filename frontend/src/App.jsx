@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-
+import QuizPage from "./pages/QuizPage";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import StudyPilot from "./pages/StudyPilot.jsx";
@@ -84,6 +84,8 @@ function App() {
         path="*"
         element={<Navigate to="/" replace />}
       />
+
+      <Route path="/quiz" element={<QuizPage />} />
     </Routes>
   );
 }

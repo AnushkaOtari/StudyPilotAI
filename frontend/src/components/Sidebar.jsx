@@ -88,6 +88,10 @@ function Sidebar({
           </div>
         </div>
 
+        <NavLink to="/quiz">
+        📝 Quiz
+        </NavLink>
+
         {/* Study Materials (PDFs) */}
         <div className="sidebar-section">
           <div className="section-title">

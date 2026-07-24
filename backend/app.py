@@ -1,4 +1,5 @@
 import os
+from routes.quiz import router as quiz_router
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,7 +10,7 @@ from auth.router import router as auth_router
 app = FastAPI()
 
 app.include_router(auth_router)
-
+app.include_router(quiz_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
