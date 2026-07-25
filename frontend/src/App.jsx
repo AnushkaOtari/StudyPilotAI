@@ -85,7 +85,17 @@ function App() {
         element={<Navigate to="/" replace />}
       />
 
-      <Route path="/quiz" element={<QuizPage />} />
+      <Route
+        path="/quiz"
+        element={
+          <ProtectedRoute>
+            <QuizPage />
+          </ProtectedRoute>
+        
+        }
+      />
+
+      
     </Routes>
   );
 }
