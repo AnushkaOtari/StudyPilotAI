@@ -1,3 +1,6 @@
+import os
+import pickle
+
 import faiss
 import numpy as np
 
@@ -7,6 +10,29 @@ class VectorStore:
     def __init__(self, dimension):
         self.index = faiss.IndexFlatL2(dimension)
         self.documents = []
+
+    def save(self, folder):
+        """Persist this store's FAISS index + document metadata to disk."""
+        os.makedirs(folder, exist_ok=True)
+        faiss.write_index(self.index, os.path.join(folder, "faiss.index"))
+        with open(os.path.join(folder, "documents.pkl"), "wb") as f:
+            pickle.dump(self.documents, f)
+
+    @classmethod
+    def load(cls, folder):
+        """Load a previously saved store from disk. Returns None if not found."""
+        index_path = os.path.join(folder, "faiss.index")
+        docs_path = os.path.join(folder, "documents.pkl")
+
+        if not (os.path.exists(index_path) and os.path.exists(docs_path)):
+            return None
+
+        store = cls.__new__(cls)
+        store.index = faiss.read_index(index_path)
+        with open(docs_path, "rb") as f:
+            store.documents = pickle.load(f)
+
+        return store
 
     def add(self, embeddings, chunks, source=None):
 

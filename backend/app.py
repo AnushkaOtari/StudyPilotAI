@@ -1,7 +1,7 @@
 import os
 from routes.quiz import router as quiz_router
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from models import QuestionRequest
 from rag.rag_pipeline import ask_rag, load_pdf, delete_pdf_and_rebuild
@@ -22,13 +22,22 @@ app.add_middleware(
 # -----------------------------
 # Upload Folder
 # -----------------------------
+# Every chat gets its own subfolder: uploads/chat_<chat_id>/
+# This keeps each chat's PDFs (and therefore its FAISS index, built in
+# rag_pipeline.py) physically and logically separate from every other chat.
 
-UPLOAD_FOLDER = "uploads"
+BASE_UPLOAD_FOLDER = "uploads"
 
 os.makedirs(
-    UPLOAD_FOLDER,
+    BASE_UPLOAD_FOLDER,
     exist_ok=True
 )
+
+
+def get_chat_upload_folder(chat_id: str) -> str:
+    folder = os.path.join(BASE_UPLOAD_FOLDER, f"chat_{chat_id}")
+    os.makedirs(folder, exist_ok=True)
+    return folder
 
 # -----------------------------
 # Home Route
@@ -41,38 +50,36 @@ def root():
     }
 
 # -----------------------------
-# -----------------------------
 # Startup Event
 # -----------------------------
+# NOTE: We no longer eagerly re-parse/re-embed every PDF on startup. Each
+# chat's FAISS index + document metadata is now persisted to disk
+# (vectorstores/chat_<id>/) by rag_pipeline.load_pdf(), and is loaded lazily
+# from disk the first time that chat is used (see rag_pipeline._get_store).
+# This avoids re-embedding every PDF, for every chat, on every restart.
 
 @app.on_event("startup")
 def startup_event():
-    print("Scanning uploads directory on startup...")
-    if os.path.exists(UPLOAD_FOLDER):
-        for filename in os.listdir(UPLOAD_FOLDER):
-            if filename.lower().endswith(".pdf"):
-                file_path = os.path.join(UPLOAD_FOLDER, filename)
-                try:
-                    load_pdf(file_path)
-                except Exception as e:
-                    print(f"Error loading {filename} on startup: {e}")
+    print("StudyPilot backend started. Per-chat vector stores load lazily on first use.")
 
 # -----------------------------
 # Upload PDF
 # -----------------------------
 
 @app.post("/upload")
-def upload_pdf(file: UploadFile = File(...)):
+def upload_pdf(chat_id: str = Form(...), file: UploadFile = File(...)):
+
+    upload_folder = get_chat_upload_folder(chat_id)
 
     file_path = os.path.join(
-        UPLOAD_FOLDER,
+        upload_folder,
         file.filename
     )
 
     with open(file_path, "wb") as f:
         f.write(file.file.read())
 
-    load_pdf(file_path)
+    load_pdf(file_path, chat_id)
 
     return {
         "message": f"{file.filename} uploaded and indexed successfully."
@@ -83,10 +90,9 @@ def upload_pdf(file: UploadFile = File(...)):
 # -----------------------------
 
 @app.get("/files")
-def list_files():
-    if not os.path.exists(UPLOAD_FOLDER):
-        return []
-    files = [f for f in os.listdir(UPLOAD_FOLDER) if f.lower().endswith(".pdf")]
+def list_files(chat_id: str):
+    upload_folder = get_chat_upload_folder(chat_id)
+    files = [f for f in os.listdir(upload_folder) if f.lower().endswith(".pdf")]
     return files
 
 # -----------------------------
@@ -94,9 +100,10 @@ def list_files():
 # -----------------------------
 
 @app.delete("/files/{filename}")
-def delete_file(filename: str):
+def delete_file(filename: str, chat_id: str):
+    upload_folder = get_chat_upload_folder(chat_id)
     try:
-        delete_pdf_and_rebuild(filename, UPLOAD_FOLDER)
+        delete_pdf_and_rebuild(filename, chat_id, upload_folder)
         return {"message": f"{filename} deleted successfully."}
     except Exception as e:
         return {"message": f"Error deleting file: {str(e)}"}
@@ -110,6 +117,7 @@ def ask_question(data: QuestionRequest):
 
     response = ask_rag(
         data.question,
+        chat_id=data.chat_id,
         filename=data.filename
     )
 

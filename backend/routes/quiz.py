@@ -9,6 +9,7 @@ def generate_quiz_route(request: QuizRequest):
 
     quiz = generate_quiz(
         request.pdf_name,
+        request.chat_id,
         request.num_questions
     )
 

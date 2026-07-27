@@ -11,10 +11,11 @@ client = genai.Client(
     api_key=os.getenv("GOOGLE_API_KEY")
 )
 
-def generate_quiz(pdf_name, num_questions=10):
+def generate_quiz(pdf_name, chat_id, num_questions=10):
 
     context, _ = retrieve_context(
         query="Generate quiz from this document",
+        chat_id=chat_id,
         filename=pdf_name,
         k=8
     )
