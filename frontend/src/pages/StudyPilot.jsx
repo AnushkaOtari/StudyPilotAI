@@ -25,12 +25,25 @@ function StudyPilot() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.length > 0) return parsed;
+        if (parsed.length > 0) {
+          let updated = false;
+          const mapped = parsed.map((c) => {
+            if (!c.chat_id) {
+              c.chat_id = crypto.randomUUID();
+              updated = true;
+            }
+            return c;
+          });
+          if (updated) {
+            localStorage.setItem("studypilot_conversations", JSON.stringify(mapped));
+          }
+          return mapped;
+        }
       } catch (e) {
         console.error("Failed to parse conversations:", e);
       }
     }
-    return [{ id: Date.now(), title: "Conversation 1", messages: [] }];
+    return [{ id: Date.now(), title: "Conversation 1", messages: [], chat_id: crypto.randomUUID() }];
   });
 
   // Track the active conversation ID
@@ -43,6 +56,13 @@ function StudyPilot() {
     return conversations[0]?.id || Date.now();
   });
 
+  // Find active conversation and derive currentChatId
+  const activeConversation = conversations.find(
+    (c) => c.id === activeConversationId
+  ) || conversations[0] || { messages: [] };
+
+  const currentChatId = activeConversation?.chat_id;
+
   // Persist conversations in localStorage
   useEffect(() => {
     localStorage.setItem("studypilot_conversations", JSON.stringify(conversations));
@@ -52,10 +72,11 @@ function StudyPilot() {
     localStorage.setItem("studypilot_active_conv_id", activeConversationId);
   }, [activeConversationId]);
 
-  // Fetch already uploaded files from backend on mount
-  const fetchUploadedFiles = async () => {
+  // Fetch already uploaded files from backend
+  const fetchUploadedFiles = async (chatId) => {
+    if (!chatId) return;
     try {
-      const response = await fetch("http://127.0.0.1:8000/files");
+      const response = await fetch(`http://127.0.0.1:8000/files?chat_id=${chatId}`);
       if (response.ok) {
         const files = await response.json();
         setUploadedFiles(files);
@@ -66,8 +87,10 @@ function StudyPilot() {
   };
 
   useEffect(() => {
-    fetchUploadedFiles();
-  }, []);
+    if (currentChatId) {
+      fetchUploadedFiles(currentChatId);
+    }
+  }, [currentChatId]);
 
   // Create a new empty conversation and select it
   const createNewConversation = () => {
@@ -75,7 +98,8 @@ function StudyPilot() {
     const newConv = {
       id: newId,
       title: `Conversation ${conversations.length + 1}`,
-      messages: []
+      messages: [],
+      chat_id: crypto.randomUUID()
     };
     setConversations((prev) => [...prev, newConv]);
     setActiveConversationId(newId);
@@ -87,7 +111,7 @@ function StudyPilot() {
     if (conversations.length === 1) {
       // If it's the last chat, clear its messages instead of leaving zero conversations
       const newId = Date.now();
-      setConversations([{ id: newId, title: "Conversation 1", messages: [] }]);
+      setConversations([{ id: newId, title: "Conversation 1", messages: [], chat_id: crypto.randomUUID() }]);
       setActiveConversationId(newId);
     } else {
       const remaining = conversations.filter((c) => c.id !== id);
@@ -130,6 +154,7 @@ function StudyPilot() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("chat_id", currentChatId);
 
     try {
       const response = await fetch("http://127.0.0.1:8000/upload", {
@@ -145,7 +170,7 @@ function StudyPilot() {
       setUploadStatus(data.message);
       
       // Refresh the uploaded file list
-      await fetchUploadedFiles();
+      await fetchUploadedFiles(currentChatId);
       setFile(null);
     } catch (error) {
       console.error(error);
@@ -161,12 +186,12 @@ function StudyPilot() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/files/${encodeURIComponent(filename)}`,
+        `http://127.0.0.1:8000/files/${encodeURIComponent(filename)}?chat_id=${currentChatId}`,
         { method: "DELETE" }
       );
 
       if (response.ok) {
-        await fetchUploadedFiles();
+        await fetchUploadedFiles(currentChatId);
         // If the active scope was the deleted PDF, reset scope
         if (selectedPdf === filename) {
           setSelectedPdf(null);
@@ -213,6 +238,7 @@ function StudyPilot() {
         },
         body: JSON.stringify({
           question: userQuestion,
+          chat_id: currentChatId,
           filename: selectedPdf
         }),
       });
@@ -266,12 +292,6 @@ function StudyPilot() {
       setLoading(false);
     }
   };
-
-  // Get active conversation messages
-  const activeConversation = conversations.find(
-    (c) => c.id === activeConversationId
-  ) || conversations[0] || { messages: [] };
-
   return (
     <div className="app">
       <Sidebar
@@ -284,6 +304,7 @@ function StudyPilot() {
         selectedPdf={selectedPdf}
         onSelectPdf={setSelectedPdf}
         onDeletePdf={deletePdf}
+        currentChatId={currentChatId}
       />
 
       <div className="main-content">

@@ -22,6 +22,7 @@ function Sidebar({
   selectedPdf,
   onSelectPdf,
   onDeletePdf,
+  currentChatId,
 }) {
   return (
     <div className="sidebar animate-fade-in">
@@ -89,7 +90,7 @@ function Sidebar({
           </div>
         </div>
 
-        <NavLink to="/quiz">
+        <NavLink to="/quiz" state={{ chatId: currentChatId }}>
         📝 Quiz
         </NavLink>
 
