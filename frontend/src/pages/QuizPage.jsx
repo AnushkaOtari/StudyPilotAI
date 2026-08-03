@@ -1,12 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { generateQuiz, getQuizFeedback } from "../services/quizService";
-import { ArrowLeft, Play, RefreshCw, Award, CheckCircle, XCircle, HelpCircle, Loader } from "lucide-react";
+import { generateQuiz, getQuizFeedback } from "../services/quizservice";
+import api from "../services/api";
+import useAuth from "../hooks/useAuth";
+import { ArrowLeft, Play, RefreshCw, Award, CheckCircle, XCircle, Loader } from "lucide-react";
 import "./QuizPage.css";
 
 function QuizPage() {
   const location = useLocation();
   const chatId = location.state?.chatId;
+  const { currentUser } = useAuth();
+  const userId = currentUser?.id;
+  const quizStorageKey = useMemo(() => {
+    if (!userId || !chatId) return null;
+    return `studypilot_${userId}_chat_${chatId}_quiz_state`;
+  }, [userId, chatId]);
 
   // State variables
   const [mode, setMode] = useState("config"); // 'config' | 'attempt' | 'result'
@@ -29,6 +37,78 @@ function QuizPage() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (!quizStorageKey) return;
+    const saved = localStorage.getItem(quizStorageKey);
+    if (!saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMode("config");
+      setPdfName("");
+      setNumQuestions(5);
+      setDifficulty("mixed");
+      setQuestionType("mixed");
+      setQuestions([]);
+      setAnswers({});
+      setCurrentIndex(0);
+      setStartTime(null);
+      setElapsedTime(0);
+      setFeedback("");
+      setError("");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(saved);
+      setMode(parsed.mode || "config");
+      setPdfName(parsed.pdfName || "");
+      setNumQuestions(parsed.numQuestions || 5);
+      setDifficulty(parsed.difficulty || "mixed");
+      setQuestionType(parsed.questionType || "mixed");
+      setQuestions(parsed.questions || []);
+      setAnswers(parsed.answers || {});
+      setCurrentIndex(parsed.currentIndex || 0);
+      setStartTime(parsed.startTime || null);
+      setElapsedTime(parsed.elapsedTime || 0);
+      setFeedback(parsed.feedback || "");
+    } catch (err) {
+      console.error("Failed to restore quiz state:", err);
+      localStorage.removeItem(quizStorageKey);
+    }
+  }, [quizStorageKey]);
+
+  useEffect(() => {
+    if (!quizStorageKey) return;
+    localStorage.setItem(
+      quizStorageKey,
+      JSON.stringify({
+        mode,
+        pdfName,
+        numQuestions,
+        difficulty,
+        questionType,
+        questions,
+        currentIndex,
+        answers,
+        startTime,
+        elapsedTime,
+        feedback,
+      })
+    );
+  }, [
+    quizStorageKey,
+    mode,
+    pdfName,
+    numQuestions,
+    difficulty,
+    questionType,
+    questions,
+    currentIndex,
+    answers,
+    startTime,
+    elapsedTime,
+    feedback,
+  ]);
+
   // Fetch available PDFs in this chat on mount
   useEffect(() => {
     const fetchPdfs = async () => {
@@ -37,13 +117,8 @@ function QuizPage() {
         return;
       }
       try {
-        const response = await fetch(`http://127.0.0.1:8000/files?chat_id=${chatId}`);
-        if (response.ok) {
-          const files = await response.json();
-          setAvailablePdfs(files);
-        } else {
-          console.error("Failed to fetch PDFs from backend");
-        }
+        const response = await api.get("/files", { params: { chat_id: chatId } });
+        setAvailablePdfs(response.data);
       } catch (err) {
         console.error("Error fetching PDFs:", err);
       } finally {

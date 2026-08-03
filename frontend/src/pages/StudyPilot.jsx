@@ -1,12 +1,37 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import "../App.css";
+import api from "../services/api";
+import useAuth from "../hooks/useAuth";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import UploadBox from "../components/UploadBox";
 import ChatBox from "../components/ChatBox";
 import ChatInput from "../components/ChatInput";
 
+const createDefaultConversation = () => ({
+  id: Date.now(),
+  title: "Conversation 1",
+  messages: [],
+  chat_id: crypto.randomUUID(),
+});
+
 function StudyPilot() {
+  const { currentUser } = useAuth();
+  console.log("Current User:", currentUser);
+  console.log("User ID:", currentUser?.id);
+  const userId = currentUser?.id;
+  const storageKeys = useMemo(() => {
+    if (!userId) return null;
+    return {
+      conversations: `studypilot_${userId}_conve
+      rsations`,
+      activeChat: `studypilot_${userId}_active_chat`,
+      selectedPdf: `studypilot_${userId}_selected_pdf`,
+    };
+  }, [userId]);
+
+  
+
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -19,9 +44,9 @@ function StudyPilot() {
   // Selected PDF to scope RAG queries (null means query all notes)
   const [selectedPdf, setSelectedPdf] = useState(null);
 
-  // Load conversations from local storage
-  const [conversations, setConversations] = useState(() => {
-    const saved = localStorage.getItem("studypilot_conversations");
+  const loadUserConversations = useCallback(() => {
+    if (!storageKeys) return [createDefaultConversation()];
+    const saved = localStorage.getItem(storageKeys.conversations);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -35,7 +60,7 @@ function StudyPilot() {
             return c;
           });
           if (updated) {
-            localStorage.setItem("studypilot_conversations", JSON.stringify(mapped));
+            localStorage.setItem(storageKeys.conversations, JSON.stringify(mapped));
           }
           return mapped;
         }
@@ -43,18 +68,29 @@ function StudyPilot() {
         console.error("Failed to parse conversations:", e);
       }
     }
-    return [{ id: Date.now(), title: "Conversation 1", messages: [], chat_id: crypto.randomUUID() }];
-  });
+    return [createDefaultConversation()];
+  }, [storageKeys]);
+
+  // Load conversations from user-scoped local storage
+  const [conversations, setConversations] = useState([]);
 
   // Track the active conversation ID
-  const [activeConversationId, setActiveConversationId] = useState(() => {
-    const saved = localStorage.getItem("studypilot_active_conv_id");
-    if (saved) {
-      const parsedId = Number(saved);
-      if (parsedId) return parsedId;
-    }
-    return conversations[0]?.id || Date.now();
-  });
+  const [activeConversationId, setActiveConversationId] = useState(null);
+
+  useEffect(() => {
+    if (!storageKeys) return;
+    const loadedConversations = loadUserConversations();
+    const savedActiveChat = localStorage.getItem(storageKeys.activeChat);
+    const parsedActiveChat = savedActiveChat ? Number(savedActiveChat) : null;
+    const activeChatExists = loadedConversations.some((c) => c.id === parsedActiveChat);
+    const savedSelectedPdf = localStorage.getItem(storageKeys.selectedPdf);
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setConversations(loadedConversations);
+    setActiveConversationId(activeChatExists ? parsedActiveChat : loadedConversations[0].id);
+    setSelectedPdf(savedSelectedPdf || null);
+    setUploadedFiles([]);
+  }, [loadUserConversations, storageKeys]);
 
   // Find active conversation and derive currentChatId
   const activeConversation = conversations.find(
@@ -65,22 +101,32 @@ function StudyPilot() {
 
   // Persist conversations in localStorage
   useEffect(() => {
-    localStorage.setItem("studypilot_conversations", JSON.stringify(conversations));
-  }, [conversations]);
+    if (storageKeys && conversations.length > 0) {
+      localStorage.setItem(storageKeys.conversations, JSON.stringify(conversations));
+    }
+  }, [conversations, storageKeys]);
 
   useEffect(() => {
-    localStorage.setItem("studypilot_active_conv_id", activeConversationId);
-  }, [activeConversationId]);
+    if (storageKeys && activeConversationId) {
+      localStorage.setItem(storageKeys.activeChat, activeConversationId);
+    }
+  }, [activeConversationId, storageKeys]);
+
+  useEffect(() => {
+    if (!storageKeys) return;
+    if (selectedPdf) {
+      localStorage.setItem(storageKeys.selectedPdf, selectedPdf);
+    } else {
+      localStorage.removeItem(storageKeys.selectedPdf);
+    }
+  }, [selectedPdf, storageKeys]);
 
   // Fetch already uploaded files from backend
   const fetchUploadedFiles = async (chatId) => {
     if (!chatId) return;
     try {
-      const response = await fetch(`http://127.0.0.1:8000/files?chat_id=${chatId}`);
-      if (response.ok) {
-        const files = await response.json();
-        setUploadedFiles(files);
-      }
+      const response = await api.get("/files", { params: { chat_id: chatId } });
+      setUploadedFiles(response.data);
     } catch (error) {
       console.error("Error fetching uploaded files:", error);
     }
@@ -88,6 +134,7 @@ function StudyPilot() {
 
   useEffect(() => {
     if (currentChatId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchUploadedFiles(currentChatId);
     }
   }, [currentChatId]);
@@ -157,16 +204,10 @@ function StudyPilot() {
     formData.append("chat_id", currentChatId);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/upload", {
-        method: "POST",
-        body: formData,
+      const response = await api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      if (!response.ok) {
-        throw new Error("Server error during upload.");
-      }
-
-      const data = await response.json();
+      const data = response.data;
       setUploadStatus(data.message);
       
       // Refresh the uploaded file list
@@ -185,19 +226,13 @@ function StudyPilot() {
     if (!confirm(`Are you sure you want to delete "${filename}"?`)) return;
 
     try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/files/${encodeURIComponent(filename)}?chat_id=${currentChatId}`,
-        { method: "DELETE" }
-      );
-
-      if (response.ok) {
-        await fetchUploadedFiles(currentChatId);
-        // If the active scope was the deleted PDF, reset scope
-        if (selectedPdf === filename) {
-          setSelectedPdf(null);
-        }
-      } else {
-        alert("Failed to delete PDF from backend.");
+      await api.delete(`/files/${encodeURIComponent(filename)}`, {
+        params: { chat_id: currentChatId },
+      });
+      await fetchUploadedFiles(currentChatId);
+      // If the active scope was the deleted PDF, reset scope
+      if (selectedPdf === filename) {
+        setSelectedPdf(null);
       }
     } catch (error) {
       console.error("Error deleting PDF:", error);
@@ -231,23 +266,13 @@ function StudyPilot() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/ask", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await api.post("/ask", {
           question: userQuestion,
           chat_id: currentChatId,
           filename: selectedPdf
-        }),
-      });
+        });
 
-      if (!response.ok) {
-        throw new Error("Ask API failure");
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       // Append Assistant Message to Active Chat
       setConversations((prev) =>
@@ -295,6 +320,7 @@ function StudyPilot() {
   return (
     <div className="app">
       <Sidebar
+        currentUser={currentUser}
         conversations={conversations}
         activeConversationId={activeConversationId}
         onSelectConversation={setActiveConversationId}

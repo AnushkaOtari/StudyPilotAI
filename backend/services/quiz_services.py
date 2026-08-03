@@ -4,7 +4,7 @@ import random
 from dotenv import load_dotenv
 from google import genai
 
-from rag.rag_pipeline import retrieve_context
+from rag.rag_pipeline import retrieve_context, has_vector_store
 
 load_dotenv()
 
@@ -13,7 +13,7 @@ client = genai.Client(
 )
 
 def validate_quiz_data(data):
-    if not isinstance(data, list):
+    if not isinstance(data, list) or len(data) == 0:
         return False
     for q in data:
         if not isinstance(q, dict):
@@ -22,19 +22,47 @@ def validate_quiz_data(data):
         for field in ["question", "type", "difficulty", "topic", "explanation", "correct_answer", "source_chunk"]:
             if field not in q:
                 return False
+
+        # question/explanation/source_chunk must be non-empty, meaningful text
+        if not isinstance(q.get("question"), str) or not q["question"].strip():
+            return False
+        if not isinstance(q.get("explanation"), str) or not q["explanation"].strip():
+            return False
+        if not isinstance(q.get("source_chunk"), str) or not q["source_chunk"].strip():
+            return False
+
         q_type = q.get("type")
         if q_type not in ["mcq", "true_false", "fill_blank"]:
             return False
+
         if q_type == "mcq":
             opts = q.get("options")
             if not isinstance(opts, list) or len(opts) != 4:
+                return False
+            if any(not isinstance(o, str) or not o.strip() for o in opts):
                 return False
             if q.get("correct_answer") not in opts:
                 return False
         elif q_type == "true_false":
             if not isinstance(q.get("correct_answer"), bool):
                 return False
+        elif q_type == "fill_blank":
+            if not isinstance(q.get("correct_answer"), str) or not q["correct_answer"].strip():
+                return False
     return True
+
+def _friendly_generation_error(e):
+    """Map a raw exception from the Gemini call/JSON parse into a
+    user-friendly message without exposing internals."""
+    msg = str(e).lower()
+    if isinstance(e, json.JSONDecodeError) or "json" in msg or "expecting value" in msg:
+        return "The study assistant returned an unexpected response format. Please try again."
+    if "timeout" in msg or "deadline" in msg:
+        return "The study assistant took too long to respond. Please try again."
+    if "api key" in msg or "permission" in msg or "unauthorized" in msg or "401" in msg:
+        return "The study assistant is temporarily unavailable due to a configuration issue. Please contact support."
+    return "The study assistant encountered an error while generating your quiz. Please try again."
+
 
 def shuffle_mcq_options(data):
     for q in data:
@@ -46,21 +74,54 @@ def shuffle_mcq_options(data):
                 q["options"] = opts
     return data
 
-def generate_quiz(pdf_name, chat_id, num_questions=10, difficulty="mixed", question_type="mixed"):
-    # Calculate retrieval size k
+def generate_quiz(pdf_name, user_id, chat_id, num_questions=10, difficulty="mixed", question_type="mixed"):
+    # No documents indexed for this chat at all yet
+    if not has_vector_store(user_id, chat_id):
+        return {
+            "error": "No study documents found for this chat yet. Please upload at least one PDF before generating a quiz."
+        }
+
+    # Calculate retrieval size k, scaling with how many questions were requested
     k = int(min(30, max(8, num_questions * 1.5)))
 
-    context, _ = retrieve_context(
-        query="Generate a comprehensive, diverse quiz containing key concepts, facts, terms, and explanations from this document",
-        chat_id=chat_id,
-        filename=pdf_name,
-        k=k
-    )
+    try:
+        _, results = retrieve_context(
+            query="Generate a comprehensive, diverse quiz containing key concepts, facts, terms, and explanations from this document",
+            user_id=user_id,
+            chat_id=chat_id,
+            filename=pdf_name,
+            k=k
+        )
+    except Exception as e:
+        print(f"Retrieval failed while generating quiz: {e}")
+        return {
+            "error": "We couldn't read your study materials right now. Please try again in a moment."
+        }
 
-    if not context or not context.strip():
+    if not results:
         return {
             "error": "Not enough information in the uploaded documents to generate the requested quiz."
         }
+
+    # Avoid feeding the model the same chunk more than once, so it isn't
+    # nudged toward generating several questions off the same passage.
+    seen_chunks = set()
+    deduped_results = []
+    for doc in results:
+        text = (doc.get("text") or "").strip()
+        if text and text not in seen_chunks:
+            seen_chunks.add(text)
+            deduped_results.append(doc)
+
+    if not deduped_results:
+        return {
+            "error": "Not enough information in the uploaded documents to generate the requested quiz."
+        }
+
+    context = "\n\n".join(
+        f"Source: {doc.get('source', 'Unknown')} (Page {doc.get('page', 1)})\n{doc['text']}"
+        for doc in deduped_results
+    )
 
     difficulty_instruction = ""
     if difficulty != "mixed":
@@ -170,12 +231,12 @@ Generate exactly {num_questions} questions. Return ONLY a valid JSON list.
         if validate_quiz_data(data):
             return shuffle_mcq_options(data)
         return {
-            "error": "Failed to validate quiz structure generated from document after retry. Please try again."
+            "error": "We couldn't generate a well-formed quiz from your documents. Please try again."
         }
     except Exception as e:
         print(f"Quiz generation failed on retry: {e}")
         return {
-            "error": "The study assistant timed out or encountered an error. Please ensure your Gemini API key is valid."
+            "error": _friendly_generation_error(e)
         }
 
 def get_quiz_feedback(results):

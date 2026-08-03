@@ -1,6 +1,9 @@
 import "./Sidebar.css";
 import logo from "../assets/logo.png";
 import { NavLink } from "react-router-dom";
+import { Brain } from "lucide-react";
+import { BrainCircuit, ChevronRight } from "lucide-react";
+
 import { 
   Plus, 
   MessageSquare, 
@@ -13,6 +16,7 @@ import {
 } from "lucide-react";
 
 function Sidebar({
+  currentUser,
   conversations = [],
   activeConversationId,
   onSelectConversation,
@@ -44,9 +48,10 @@ function Sidebar({
         <div className="avatar">
           <User size={18} />
         </div>
+          
         <div className="profile-info">
-          <h3>Anushka Otari</h3>
-          <p>Diploma AIML Student</p>
+          <h3>{currentUser?.name || "Guest User"}</h3>
+          <p>{currentUser?.email || "Not signed in"}</p>
         </div>
       </div>
 
@@ -90,8 +95,22 @@ function Sidebar({
           </div>
         </div>
 
-        <NavLink to="/quiz" state={{ chatId: currentChatId }}>
-        📝 Quiz
+        <NavLink
+        to="/quiz"
+        state={{ chatId: currentChatId }}
+        className="sidebar-quiz-card"
+        >
+          <div className="quiz-icon-box">
+            <BrainCircuit size={22} />
+          </div>
+          
+          <div className="quiz-text">
+            <span className="quiz-title">AI Quiz</span>
+            <span className="quiz-subtitle">
+              Test your understanding
+            </span>
+          </div>
+          <ChevronRight size={18} className="quiz-arrow" />
         </NavLink>
 
         {/* Study Materials (PDFs) */}

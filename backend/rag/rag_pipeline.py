@@ -1,4 +1,5 @@
 import os
+import re
 import time
 
 from rag.pdf_reader import extract_text, extract_text_by_page
@@ -10,38 +11,53 @@ from rag.qa import answer_question
 # -----------------------------
 # Per-chat state
 # -----------------------------
-# Every chat gets its own FAISS-backed VectorStore and its own short
-# conversational history. Both are keyed by chat_id so that Chat 1's
-# PDFs/history never leak into Chat 2's retrieval.
+# Every authenticated user's chat gets its own FAISS-backed VectorStore and
+# short conversational history. Both are keyed by user_id + chat_id so data
+# cannot leak between users even if chat ids collide.
 
 VECTORSTORE_FOLDER = "vectorstores"
+SAFE_SEGMENT_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
-_stores = {}          # chat_id -> VectorStore (in-memory cache)
-_chat_histories = {}  # chat_id -> list of {question, answer}
-
-
-def _store_folder(chat_id):
-    return os.path.join(VECTORSTORE_FOLDER, f"chat_{chat_id}")
+_stores = {}          # (user_id, chat_id) -> VectorStore (in-memory cache)
+_chat_histories = {}  # (user_id, chat_id) -> list of {question, answer}
 
 
-def _get_store(chat_id):
+def _store_key(user_id, chat_id):
+    return (str(user_id), str(chat_id))
+
+
+def _safe_segment(value, name):
+    value = str(value)
+    if not SAFE_SEGMENT_RE.match(value):
+        raise ValueError(f"Invalid {name}.")
+    return value
+
+
+def _store_folder(user_id, chat_id):
+    user_id = _safe_segment(user_id, "user id")
+    chat_id = _safe_segment(chat_id, "chat id")
+    return os.path.join(VECTORSTORE_FOLDER, f"user_{user_id}", f"chat_{chat_id}")
+
+
+def _get_store(user_id, chat_id):
     """Return the VectorStore for this chat, loading it from disk into the
     in-memory cache on first use. Returns None if the chat has no store yet
     (i.e. nothing has been uploaded to it)."""
 
-    if chat_id in _stores:
-        return _stores[chat_id]
+    key = _store_key(user_id, chat_id)
+    if key in _stores:
+        return _stores[key]
 
-    loaded = VectorStore.load(_store_folder(chat_id))
+    loaded = VectorStore.load(_store_folder(user_id, chat_id))
     if loaded is not None:
-        _stores[chat_id] = loaded
+        _stores[key] = loaded
 
     return loaded
 
 
-def load_pdf(pdf_path, chat_id):
+def load_pdf(pdf_path, user_id, chat_id):
 
-    print(f"Loading PDF into chat {chat_id}: {pdf_path}")
+    print(f"Loading PDF into user {user_id}, chat {chat_id}: {pdf_path}")
 
     pages = extract_text_by_page(pdf_path)
     print("Pages Extracted:", len(pages))
@@ -72,7 +88,7 @@ def load_pdf(pdf_path, chat_id):
 
     print("Embeddings:", len(embeddings))
 
-    store = _get_store(chat_id)
+    store = _get_store(user_id, chat_id)
     if store is None:
         store = VectorStore(len(embeddings[0]))
 
@@ -84,19 +100,28 @@ def load_pdf(pdf_path, chat_id):
 
     # Persist to disk immediately so the index survives a server restart
     # without needing to re-embed every PDF.
-    store.save(_store_folder(chat_id))
-    _stores[chat_id] = store
+    store.save(_store_folder(user_id, chat_id))
+    _stores[_store_key(user_id, chat_id)] = store
 
     # A new upload changes the chat's knowledge base, so its conversational
     # context is no longer reliable — reset it.
-    _chat_histories[chat_id] = []
+    _chat_histories[_store_key(user_id, chat_id)] = []
 
-    print(f"Knowledge base updated for chat {chat_id}")
+    print(f"Knowledge base updated for user {user_id}, chat {chat_id}")
 
 
-def retrieve_context(query, chat_id, filename=None, k=8):
+def has_vector_store(user_id, chat_id):
+    """Return True if this chat has an indexed vector store on disk/in-memory
+    (i.e. at least one PDF has been successfully uploaded and embedded).
+    Lets callers give a specific "no documents uploaded" message instead of
+    a generic empty-retrieval message."""
 
-    store = _get_store(chat_id)
+    return _get_store(user_id, chat_id) is not None
+
+
+def retrieve_context(query, user_id, chat_id, filename=None, k=8):
+
+    store = _get_store(user_id, chat_id)
 
     if store is None:
         return "", []
@@ -122,9 +147,9 @@ def retrieve_context(query, chat_id, filename=None, k=8):
     return context, results
 
 
-def ask_rag(question, chat_id, filename=None):
+def ask_rag(question, user_id, chat_id, filename=None):
 
-    store = _get_store(chat_id)
+    store = _get_store(user_id, chat_id)
 
     if store is None:
         return {
@@ -132,13 +157,15 @@ def ask_rag(question, chat_id, filename=None):
             "sources": []
         }
 
-    chat_history = _chat_histories.setdefault(chat_id, [])
+    key = _store_key(user_id, chat_id)
+    chat_history = _chat_histories.setdefault(key, [])
 
     total_start = time.time()
 
     start = time.time()
     context, results = retrieve_context(
         query=question,
+        user_id=user_id,
         chat_id=chat_id,
         filename=filename,
         k=2 if filename else 8
@@ -205,7 +232,7 @@ def ask_rag(question, chat_id, filename=None):
     }
 
 
-def delete_pdf_and_rebuild(filename, chat_id, upload_folder):
+def delete_pdf_and_rebuild(filename, user_id, chat_id, upload_folder):
 
     file_path = os.path.join(upload_folder, filename)
     if os.path.exists(file_path):
@@ -214,10 +241,11 @@ def delete_pdf_and_rebuild(filename, chat_id, upload_folder):
 
     # Drop this chat's store (memory + disk) and its history, then rebuild
     # from whatever PDFs remain in this chat's upload folder.
-    _stores.pop(chat_id, None)
-    _chat_histories.pop(chat_id, None)
+    key = _store_key(user_id, chat_id)
+    _stores.pop(key, None)
+    _chat_histories.pop(key, None)
 
-    store_folder = _store_folder(chat_id)
+    store_folder = _store_folder(user_id, chat_id)
     for fname in ("faiss.index", "documents.pkl"):
         fpath = os.path.join(store_folder, fname)
         if os.path.exists(fpath):
@@ -227,4 +255,4 @@ def delete_pdf_and_rebuild(filename, chat_id, upload_folder):
         for fname in os.listdir(upload_folder):
             if fname.lower().endswith(".pdf"):
                 full_path = os.path.join(upload_folder, fname)
-                load_pdf(full_path, chat_id)
+                load_pdf(full_path, user_id, chat_id)

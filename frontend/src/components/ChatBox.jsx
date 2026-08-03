@@ -40,7 +40,7 @@ function ChatBox({ messages = [], loading }) {
         <div className="message-wrapper assistant">
           <div className="chat-message ai-message">
             <div className="message-sender">
-              🤖 StudyPilot
+              StudyPilot
             </div>
             <div className="typing-indicator">
               <span></span>

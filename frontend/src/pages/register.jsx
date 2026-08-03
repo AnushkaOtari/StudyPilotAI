@@ -69,7 +69,7 @@ function Register() {
         <div className="auth-heading">
           <p>StudyPilot AI</p>
           <h1>Create account</h1>
-          <span>Start a secure workspace for your documents.</span>
+          <span>Create your AI-powered study workspace.</span>
         </div>
 
         {error && <div className="auth-error">{error}</div>}
