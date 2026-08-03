@@ -154,7 +154,7 @@ function StudyPilot() {
 
   // Delete a conversation
   const deleteConversation = (id, event) => {
-    event.stopPropagation();
+    event.stop+pagation();
     if (conversations.length === 1) {
       // If it's the last chat, clear its messages instead of leaving zero conversations
       const newId = Date.now();

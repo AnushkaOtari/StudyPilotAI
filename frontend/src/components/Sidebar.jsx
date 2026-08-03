@@ -1,9 +1,11 @@
 import "./Sidebar.css";
+import SettingsModal from "./SettingsModal";
 import logo from "../assets/logo.png";
-import { NavLink } from "react-router-dom";
 import { Brain } from "lucide-react";
 import { BrainCircuit, ChevronRight } from "lucide-react";
-
+import { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
 import { 
   Plus, 
   MessageSquare, 
@@ -28,6 +30,20 @@ function Sidebar({
   onDeletePdf,
   currentChatId,
 }) {
+
+  const [showSettings, setShowSettings] = useState(false);
+
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const handleLogout = () => {
+    const confirmLogout = window.confirm(
+      "Are you sure you want to logout?"
+    );
+    if (!confirmLogout) return;
+    logout();              // Clears auth state
+    setShowSettings(false);
+    navigate("/login");
+};
   return (
     <div className="sidebar animate-fade-in">
       {/* Brand Header */}
@@ -173,13 +189,29 @@ function Sidebar({
       </div>
 
       {/* Sidebar Footer */}
+
       <div className="sidebar-footer">
-        <div className="settings-btn">
-          <Settings size={16} />
+        <button
+        className="settings-btn"
+        onClick={() => setShowSettings(true)}
+        >
+          <Settings size={14} />
           <span>Settings</span>
-        </div>
+        </button>
       </div>
+
+      {
+      showSettings && (
+        <SettingsModal
+        currentUser={currentUser}
+        onClose={() => setShowSettings(false)}
+        onLogout={handleLogout}
+        />
+      )
+      }
+    
     </div>
+
   );
 }
 

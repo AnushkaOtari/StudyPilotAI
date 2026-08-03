@@ -1,0 +1,141 @@
+.settings-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.6);
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    z-index:999;
+}
+
+.settings-modal{
+
+    width:480px;
+
+    background:#131d30;
+
+    border-radius:18px;
+
+    padding:24px;
+
+    border:1px solid rgba(255,255,255,.08);
+
+    color:white;
+}
+
+.settings-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:24px;
+}
+
+.close-icon{
+
+    width:34px;
+    height:34px;
+
+    border:none;
+
+    background:#22304b;
+
+    color:white;
+
+    border-radius:50%;
+
+    cursor:pointer;
+
+    transition:.25s;
+}
+
+.close-icon:hover{
+
+    background:#35527d;
+}
+
+.settings-card{
+
+    background:#18243b;
+
+    border:1px solid rgba(255,255,255,.06);
+
+    border-radius:14px;
+
+    padding:22px;
+
+    margin-bottom:16px;
+}
+
+.settings-card-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    color:#6ea8ff;
+
+    font-weight:700;
+
+    margin-bottom:12px;
+}
+
+.settings-icon{
+    width:22px;
+    height:22px;
+    object-fit:contain;
+}
+.account-name{
+
+    font-size:18px;
+
+    font-weight:700;
+}
+
+.account-email{
+
+    color:#9fb0c8;
+
+    margin-top:5px;
+}
+
+.about-text{
+
+    font-size:16px;
+
+    font-weight:600;
+
+    margin-bottom:6px;
+}
+
+.logout-btn{
+
+    width:100%;
+
+    padding:13px;
+
+    background:#dc2626;
+
+    color:white;
+
+    border:none;
+
+    border-radius:10px;
+
+    font-size:15px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:.25s;
+}
+
+.logout-btn:hover{
+
+    background:#ef4444;
+}
