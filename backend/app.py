@@ -1,6 +1,7 @@
 import os
 import re
 from routes.quiz import router as quiz_router
+from routes.mindmap import router as mindmap_router
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,7 @@ app = FastAPI()
 
 app.include_router(auth_router)
 app.include_router(quiz_router)
+app.include_router(mindmap_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],

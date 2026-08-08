@@ -3,6 +3,7 @@ import QuizPage from "./pages/QuizPage";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import StudyPilot from "./pages/StudyPilot.jsx";
+import MindMapPage from "./pages/MindMapPage.jsx";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { useAuth } from "./hooks/useAuth";
@@ -95,6 +96,14 @@ function App() {
         }
       />
 
+      <Route
+        path="/mindmap"
+        element={
+          <ProtectedRoute>
+            <MindMapPage />
+          </ProtectedRoute>
+        }
+      />
       
     </Routes>
   );

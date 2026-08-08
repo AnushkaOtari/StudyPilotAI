@@ -1,0 +1,292 @@
+/* MindMapPage.css */
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
+.mindmap-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background-color: #fdfbf7; /* Paper background */
+  background-image: 
+    linear-gradient(#e1e1e1 1px, transparent 1px),
+    linear-gradient(90deg, #e1e1e1 1px, transparent 1px);
+  background-size: 20px 20px;
+  font-family: 'Patrick Hand', 'Comic Sans MS', cursive, sans-serif;
+}
+
+.mindmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 30px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 2px solid rgba(0,0,0,0.05);
+  z-index: 10;
+}
+
+.mindmap-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mindmap-header-title h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #333;
+}
+
+.mindmap-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #f1f5f9;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  color: #475569;
+  transition: all 0.2s;
+}
+.mindmap-back-btn:hover {
+  background: #e2e8f0;
+}
+
+.mindmap-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.mindmap-btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-family: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px #5b21b6;
+  transition: transform 0.1s;
+}
+.mindmap-btn-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #5b21b6;
+}
+.mindmap-btn-primary:disabled {
+  background: #cbd5e1;
+  box-shadow: 2px 2px 0px #94a3b8;
+  cursor: not-allowed;
+}
+
+.mindmap-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.mindmap-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  text-align: center;
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 5px 5px 15px rgba(0,0,0,0.05);
+  border: 2px dashed #cbd5e1;
+  z-index: 5;
+}
+.mindmap-empty-state h2 {
+  margin: 0;
+  color: #334155;
+  font-family: 'Patrick Hand', cursive;
+}
+.mindmap-empty-state p {
+  color: #64748b;
+  margin: 0;
+  max-width: 300px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
+/* Custom Nodes */
+.node-base {
+  padding: 15px 20px;
+  border-radius: 12px;
+  font-family: 'Patrick Hand', 'Comic Sans MS', cursive, sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 3px 3px 10px rgba(0,0,0,0.1);
+  border: 2px solid rgba(0,0,0,0.1);
+  min-width: 120px;
+  max-width: 250px;
+  word-wrap: break-word;
+  color: #333;
+}
+
+.node-root {
+  background: #fde68a; /* Yellow pastel */
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  padding: 25px 30px;
+  font-size: 22px;
+  border: 3px solid #f59e0b;
+}
+
+.node-main {
+  background: #bfdbfe; /* Blue pastel */
+  border-radius: 4px 4px 15px 4px; /* Sticky note vibe */
+  border-bottom: 3px solid #93c5fd;
+  border-right: 3px solid #93c5fd;
+  transform: rotate(-1deg);
+}
+
+.node-sub {
+  background: #bbf7d0; /* Green pastel */
+  border-radius: 15px;
+  font-size: 16px;
+  padding: 10px 15px;
+  border: 2px solid #86efac;
+}
+
+/* Drawer */
+.mindmap-drawer {
+  position: absolute;
+  top: 0;
+  right: -400px;
+  width: 350px;
+  height: 100%;
+  background: white;
+  box-shadow: -5px 0 20px rgba(0,0,0,0.1);
+  transition: right 0.3s ease;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+}
+.mindmap-drawer.open {
+  right: 0;
+}
+
+.drawer-header {
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: #f8fafc;
+}
+.drawer-header h2 {
+  margin: 0;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 24px;
+  color: #1e293b;
+}
+.close-drawer-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  padding: 5px;
+}
+.close-drawer-btn:hover {
+  color: #0f172a;
+}
+
+.drawer-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.drawer-section {
+  margin-bottom: 20px;
+  font-family: 'Inter', sans-serif;
+}
+.drawer-section h3 {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+.drawer-section p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.5;
+  font-size: 15px;
+}
+.drawer-section ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #334155;
+  font-size: 15px;
+}
+.drawer-section li {
+  margin-bottom: 8px;
+}
+.related-tag {
+  display: inline-block;
+  background: #e2e8f0;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  color: #475569;
+}
+
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  background: rgba(255,255,255,0.95);
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+.loader-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #8b5cf6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+.loader-text {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 20px;
+  color: #333;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  color: #ef4444;
+  font-family: 'Inter', sans-serif;
+  margin-top: 10px;
+  max-width: 300px;
+  font-size: 14px;
+}

@@ -18,7 +18,7 @@ function SettingsModal({ currentUser, onClose, onLogout }) {
         <div className="settings-header">
           <h2>
             <Settings size={24} />
-            <span>Settings</span>
+            <span>  Settings</span>
           </h2>
 
           <button

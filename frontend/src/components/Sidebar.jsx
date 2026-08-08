@@ -14,7 +14,8 @@ import {
   Settings, 
   FileText, 
   Layers, 
-  User 
+  User,
+  Network
 } from "lucide-react";
 
 function Sidebar({
@@ -124,6 +125,24 @@ function Sidebar({
             <span className="quiz-title">AI Quiz</span>
             <span className="quiz-subtitle">
               Test your understanding
+            </span>
+          </div>
+          <ChevronRight size={18} className="quiz-arrow" />
+        </NavLink>
+
+        <NavLink
+        to="/mindmap"
+        state={{ chatId: currentChatId }}
+        className="sidebar-quiz-card"
+        >
+          <div className="quiz-icon-box" style={{ background: "rgba(167, 139, 250, 0.1)", color: "#a78bfa" }}>
+            <Network size={22} />
+          </div>
+          
+          <div className="quiz-text">
+            <span className="quiz-title">AI Mind Map</span>
+            <span className="quiz-subtitle">
+              Visualize your notes
             </span>
           </div>
           <ChevronRight size={18} className="quiz-arrow" />
