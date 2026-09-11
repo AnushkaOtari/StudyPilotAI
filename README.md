@@ -1,77 +1,62 @@
-# 🎓 StudyPilot AI
+# StudyPilot AI 🎓🤖
 
-## The Problem
-
-Every student has experienced this moment:
-
-> "I've read this three times. I still don't get it."
-
-Textbooks explain concepts once, in one way. Teachers often cannot personalize explanations for every student. Most AI tools can answer questions, but they don't truly teach. They don't recognize *why* a student is confused, adapt their teaching strategy, or verify understanding before moving on.
-
-As a result, students often memorize concepts without truly understanding them.
+> An AI-powered academic study companion that helps students learn, revise, and interact with their study material using Generative AI, RAG, quizzes, and interactive mind maps.
 
 ---
 
-## The Solution
+## 📌 Overview
 
-**StudyPilot AI** is an intelligent study companion designed to help students learn, not just get answers.
+StudyPilot AI is an intelligent academic resource management and study planning platform designed to help students access and understand their study material from a single place.
 
-Instead of providing a single explanation and stopping there, StudyPilot guides students toward understanding by adapting its teaching approach based on their confusion.
+Students can upload academic PDFs and interact with their content using AI. Instead of searching through multiple documents manually, StudyPilot AI uses Retrieval-Augmented Generation (RAG) to retrieve relevant information from the student's uploaded resources and generate context-aware answers.
 
-The goal is simple:
-
-> Help students learn concepts until they finally click.
-
-StudyPilot combines Retrieval-Augmented Generation (RAG), semantic search, and adaptive tutoring techniques to deliver personalized learning experiences based on the student's own study materials.
+The platform also provides AI-powered quizzes and interactive mind maps to support active learning and revision.
 
 ---
 
-## Current Features
+## ✨ Key Features
 
-* 📄 Learn directly from uploaded study notes and PDFs
-* 🔍 Semantic search using vector embeddings and FAISS
-* 🧠 Context-aware question answering powered by Gemini
-* ⚡ FastAPI-powered backend architecture
-* 📚 Retrieval-Augmented Generation (RAG) pipeline
+### 🔐 User Authentication
 
----
-
-## Upcoming Features
-
-* 🤔 "Still Confused?" adaptive tutoring mode
-* 📝 Flashcard generation
-* ❓ Personalized quiz generation
-* 🗺️ Mind map visualization
-* 📈 Learning progress tracking
-* 💬 Interactive React-based study interface
+- User registration and login
+- JWT-based authentication
+- Protected API endpoints
+- Authenticated user sessions
+- Logout functionality
+- User-specific access to resources
 
 ---
 
-## Tech Stack
+### 📚 PDF Resource Management
 
-### AI & RAG
+Students can upload their academic PDFs and manage them within individual chats.
 
-* Google Gemini
-* Gemini Embeddings
-* FAISS Vector Database
+Features include:
 
-### Backend
-
-* Python
-* FastAPI
-
-### Frontend
-
-* React (In Progress)
-
-### Document Processing
-
-* PyMuPDF
+- PDF upload
+- PDF listing
+- PDF deletion
+- Text extraction
+- Document chunking
+- Vector embedding generation
+- Persistent FAISS storage
 
 ---
 
-## Project Status
+### 🧠 Chat-Scoped RAG
 
-🚧 Currently under active development.
+One of the core features of StudyPilot AI is its chat-scoped knowledge base.
 
-The core RAG engine, vector search pipeline, and FastAPI backend are complete. Frontend development and adaptive tutoring features are in progress.
+Each chat has its own vector store.
+
+For example:
+
+```text
+Chat A
+ ├── AI.pdf
+ ├── ML.pdf
+ └── DBMS.pdf
+
+Chat B
+ ├── Resume.pdf
+ └── Interview.pdf
