@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import QuestionRequest
 from rag.rag_pipeline import ask_rag, delete_pdf_and_rebuild
 from rag.document_queue import global_queue_processor, DocumentJob
+from rag.resource_hash_table import global_resource_hash_table
 from auth.models import User
 from auth.router import get_current_user, router as auth_router
 
@@ -135,6 +136,26 @@ def get_upload_status(
 ):
     """Returns real-time processing status for documents queued in this chat."""
     return global_queue_processor.get_chat_job_statuses(chat_id)
+
+
+@app.get("/resource/metadata")
+def get_resource_metadata(
+    filename: str,
+    chat_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Performs an O(1) average lookup in the custom ResourceHashTable 
+    to retrieve metadata for a specific document resource.
+    """
+    key = f"{current_user.id}:{chat_id}:{filename}"
+    metadata = global_resource_hash_table.get(key)
+    if not metadata:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Resource metadata for '{filename}' not found in Hash Table."
+        )
+    return metadata
 
 # -----------------------------
 # List Uploaded PDFs

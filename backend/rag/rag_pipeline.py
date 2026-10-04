@@ -7,6 +7,7 @@ from rag.chunker import chunk_text
 from rag.embedder import get_embedding
 from rag.vector_store import VectorStore
 from rag.qa import answer_question
+from rag.resource_hash_table import global_resource_hash_table
 
 # -----------------------------
 # Per-chat state
@@ -107,7 +108,26 @@ def load_pdf(pdf_path, user_id, chat_id):
     # context is no longer reliable — reset it.
     _chat_histories[_store_key(user_id, chat_id)] = []
 
-    print(f"Knowledge base updated for user {user_id}, chat {chat_id}")
+    # Index document resource metadata into Resource Hash Table (O(1) insertion)
+    filename = os.path.basename(pdf_path)
+    resource_key = f"{user_id}:{chat_id}:{filename}"
+    file_size = os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0
+
+    resource_metadata = {
+        "resource_id": f"{user_id}_{chat_id}_{filename}",
+        "filename": filename,
+        "user_id": user_id,
+        "chat_id": chat_id,
+        "file_path": pdf_path,
+        "file_size": file_size,
+        "total_pages": len(pages),
+        "total_chunks": len(chunks_with_metadata),
+        "status": "COMPLETED",
+        "indexed_at": time.time()
+    }
+    global_resource_hash_table.insert(resource_key, resource_metadata)
+
+    print(f"Knowledge base & Resource Hash Table updated for user {user_id}, chat {chat_id}")
 
 
 def has_vector_store(user_id, chat_id):
@@ -238,6 +258,10 @@ def delete_pdf_and_rebuild(filename, user_id, chat_id, upload_folder):
     if os.path.exists(file_path):
         os.remove(file_path)
         print(f"Deleted file {file_path} from disk.")
+
+    # Remove document metadata from Resource Hash Table
+    resource_key = f"{user_id}:{chat_id}:{filename}"
+    global_resource_hash_table.delete(resource_key)
 
     # Drop this chat's store (memory + disk) and its history, then rebuild
     # from whatever PDFs remain in this chat's upload folder.

@@ -20,7 +20,7 @@ function App() {
           height: "100vh",
           background: "#FFFDF5",
           color: "#111111",
-          fontFamily: "'Lancelot', serif",
+          fontFamily: "'Nuova Volte', sans-serif",
         }}
       >
         <div
