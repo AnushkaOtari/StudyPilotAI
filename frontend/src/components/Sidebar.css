@@ -1,147 +1,77 @@
 /* ---------------- Sidebar Container ---------------- */
 
 .sidebar {
-  width: 300px;
+  width: 290px;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
-  padding: 22px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
   height: 100vh;
   flex-shrink: 0;
   z-index: 10;
+  box-shadow: 2px 0 12px rgba(95, 90, 79, 0.02);
 }
 
-.sidebar-quiz-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-
-    width: 100%;
-    margin: 10px 0;
-    padding: 12px;
-
-    border-radius: var(--radius-sm);
-
-    background: #162341;
-    border: 1px solid rgba(90,130,255,.18);
-
-    text-decoration: none;
-    color: #fff;
-
-    transition: .25s ease;
-}
-
-.sidebar-quiz-card:hover{
-    background:#1c2c52;
-    border-color:#4f7cff;
-    transform:translateY(-2px);
-    box-shadow:0 8px 18px rgba(79,124,255,.18);
-}
-
-.quiz-icon-box{
-    width:30px;
-    height:30px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    border-radius: var(--radius-sm);
-
-    background:rgba(79,124,255,.12);
-
-    color:#6ea8ff;
-
-    flex-shrink:0;
-}
-
-.quiz-text{
-    display:flex;
-    flex-direction:column;
-    flex:1;
-}
-
-.quiz-title{
-    font-size:16px;
-    font-weight:700;
-    color:white;
-}
-
-.quiz-subtitle{
-    font-size:12px;
-    color:#9fb0d2;
-    margin-top:2px;
-}
-
-.quiz-arrow{
-    color:#6ea8ff;
-    transition:.25s;
-}
-
-.sidebar-quiz-card:hover .quiz-arrow{
-    transform:translateX(4px);
-}
-
-/* ---------------- Logo ---------------- */
+/* ---------------- Logo & Branding ---------------- */
 
 .sidebar-logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 2px 4px 4px;
+  padding: 4px 6px 6px;
 }
 
 .sidebar-logo-img {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
-  border-radius: 10px;
-  filter: drop-shadow(0 2px 10px rgba(37, 99, 235, 0.35));
+  border-radius: 8px;
 }
 
 .sidebar-logo-text h2 {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: -0.3px;
+  letter-spacing: 0.2px;
   color: var(--text-main);
-  line-height: 1.25;
+  line-height: 1.15;
 }
 
 .sidebar-logo-text p {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text-muted);
   line-height: 1.2;
-  margin-top: 1px;
+  margin-top: 2px;
+  font-family: var(--font-sans);
 }
 
-/* ---------------- Profile ---------------- */
+/* ---------------- User Profile Card ---------------- */
 
 .profile-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-color-light);
-  padding: 12px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .profile-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: var(--accent-soft);
+  border-color: var(--border-color-hover);
 }
 
 .avatar {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: rgba(37, 99, 235, 0.2);
-  border: 1px solid rgba(37, 99, 235, 0.4);
-  color: var(--accent-light);
+  background: var(--accent);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -150,10 +80,12 @@
 }
 
 .profile-info h3 {
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text-main);
   margin: 0;
+  line-height: 1.2;
 }
 
 .profile-info p {
@@ -162,7 +94,7 @@
   margin-top: 1px;
 }
 
-/* ---------------- Button ---------------- */
+/* ---------------- New Chat Button ---------------- */
 
 .new-chat-btn {
   display: flex;
@@ -171,25 +103,92 @@
   gap: 8px;
   width: 100%;
   background: var(--accent);
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--text-main);
+  border: 1px solid #F2D873;
+  padding: 11px 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(248, 231, 161, 0.4);
 }
 
 .new-chat-btn:hover {
   background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 4px 12px rgba(248, 231, 161, 0.5);
 }
 
 .new-chat-btn:active {
   transform: translateY(0);
+}
+
+/* ---------------- Sidebar Navigation Cards (Quiz) ---------------- */
+
+.sidebar-quiz-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 4px 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  text-decoration: none;
+  color: var(--text-main);
+  transition: all 0.2s ease;
+}
+
+.sidebar-quiz-card:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.quiz-icon-box {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--accent-light) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.quiz-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.quiz-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.quiz-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  font-family: var(--font-sans);
+}
+
+.quiz-arrow {
+  color: var(--text-muted);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-quiz-card:hover .quiz-arrow {
+  transform: translateX(3px);
+  color: var(--text-main);
 }
 
 /* ---------------- Scrollable Navigation ---------------- */
@@ -199,31 +198,32 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  margin-right: -10px;
-  padding-right: 10px;
+  gap: 18px;
+  margin-right: -8px;
+  padding-right: 8px;
 }
 
 .sidebar-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--text-faint);
-  padding: 0 6px;
+  gap: 6px;
+  color: var(--text-muted);
+  padding: 0 4px;
   margin-bottom: 2px;
 }
 
 .section-title h4 {
-  font-size: 11px;
+  font-family: var(--font-display);
+  font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.5px;
 }
 
 .list-container {
@@ -239,7 +239,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 10px;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--text-muted);
@@ -251,8 +251,8 @@
 .pdf-item-text {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 13.5px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -285,29 +285,30 @@
   opacity: 1;
 }
 
-/* Active Highlight Style */
+/* Active Highlight Style (Butter Yellow Soft Highlight) */
 .chat-item-wrapper.active,
 .pdf-item-wrapper.active {
-  background-color: rgba(37, 99, 235, 0.14);
-  border-color: rgba(37, 99, 235, 0.3);
+  background-color: var(--accent-light);
+  border-color: var(--accent);
   color: var(--text-main);
+  font-weight: 600;
 }
 
 .chat-item-wrapper.active .item-icon,
 .pdf-item-wrapper.active .item-icon {
-  color: var(--accent-light);
+  color: var(--text-main);
   opacity: 1;
 }
 
-/* ---------------- Delete Button (Hover Reveal) ---------------- */
+/* ---------------- Delete Button ---------------- */
 
 .delete-item-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 5px;
-  border-radius: 6px;
+  padding: 4px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -324,7 +325,7 @@
 .chat-item-wrapper:hover .delete-item-btn:hover,
 .pdf-item-wrapper:hover .delete-item-btn:hover {
   opacity: 1;
-  background-color: rgba(239, 68, 68, 0.15);
+  background-color: rgba(220, 38, 38, 0.1);
   color: var(--danger);
 }
 
@@ -333,14 +334,14 @@
   font-size: 12px;
   color: var(--text-faint);
   font-style: italic;
-  padding: 8px 10px;
+  padding: 6px 10px;
 }
 
 /* ---------------- Footer / Settings ---------------- */
 
 .sidebar-footer {
   margin-top: auto;
-  padding-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid var(--border-color);
 }
 
@@ -348,52 +349,38 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-
-  padding: 12px 14px;
-
+  gap: 10px;
+  padding: 10px 12px;
   background: transparent;
-  border: none;
-  outline: none;
-
+  border: 1px solid transparent;
   color: var(--text-muted);
-
-  font-size: 14px;
-  font-weight: 600;
-
-  border-radius: 12px;
-
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
 }
 
 .settings-btn:hover {
   background: var(--bg-hover);
   color: var(--text-main);
+  border-color: var(--border-color);
 }
 
 .settings-btn svg {
   flex-shrink: 0;
 }
 
-
-
 /* ---------------- Count Badge ---------------- */
 .pdf-count-badge {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent-light);
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px dashed rgba(37, 99, 235, 0.3);
-  padding: 6px 10px;
-  border-radius: 8px;
-  margin-top: 6px;
+  color: var(--text-main);
+  background: var(--accent-soft);
+  border: 1px solid var(--border-color);
+  padding: 5px 8px;
+  border-radius: 6px;
+  margin-top: 4px;
   text-align: center;
-  transition: all 0.2s ease;
-}
-
-.pdf-count-badge:hover {
-  background: rgba(37, 99, 235, 0.13);
-  border-color: rgba(37, 99, 235, 0.45);
 }

@@ -1,12 +1,12 @@
 import os
 import re
 from routes.quiz import router as quiz_router
-from routes.mindmap import router as mindmap_router
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
 from models import QuestionRequest
-from rag.rag_pipeline import ask_rag, load_pdf, delete_pdf_and_rebuild
+from rag.rag_pipeline import ask_rag, delete_pdf_and_rebuild
+from rag.document_queue import global_queue_processor, DocumentJob
 from auth.models import User
 from auth.router import get_current_user, router as auth_router
 
@@ -14,7 +14,7 @@ app = FastAPI()
 
 app.include_router(auth_router)
 app.include_router(quiz_router)
-app.include_router(mindmap_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -73,39 +73,68 @@ def root():
 # -----------------------------
 # Startup Event
 # -----------------------------
-# NOTE: We no longer eagerly re-parse/re-embed every PDF on startup. Each
-# chat's FAISS index + document metadata is now persisted to disk
-# (vectorstores/user_<user_id>/chat_<id>/) by rag_pipeline.load_pdf(), and is loaded lazily
-# from disk the first time that chat is used (see rag_pipeline._get_store).
-# This avoids re-embedding every PDF, for every chat, on every restart.
 
 @app.on_event("startup")
 def startup_event():
     print("StudyPilot backend started. Per-chat vector stores load lazily on first use.")
 
 # -----------------------------
-# Upload PDF
+# Upload Multiple PDFs (FIFO Queue)
 # -----------------------------
 
 @app.post("/upload")
 def upload_pdf(
     chat_id: str = Form(...),
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(None),
+    file: UploadFile = File(None),
     current_user: User = Depends(get_current_user),
 ):
+    upload_files = []
+    if files:
+        upload_files.extend(files)
+    if file:
+        upload_files.append(file)
+
+    if not upload_files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No PDF files provided."
+        )
 
     upload_folder = get_user_chat_upload_folder(current_user.id, chat_id)
+    jobs = []
 
-    file_path = safe_upload_path(upload_folder, file.filename)
+    for uploaded_file in upload_files:
+        file_path = safe_upload_path(upload_folder, uploaded_file.filename)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.file.read())
 
-    with open(file_path, "wb") as f:
-        f.write(file.file.read())
+        job = DocumentJob(
+            file_path=file_path,
+            filename=uploaded_file.filename,
+            user_id=current_user.id,
+            chat_id=chat_id,
+        )
+        jobs.append(job)
 
-    load_pdf(file_path, current_user.id, chat_id)
+    # Enqueue jobs in FIFO DocumentQueue and process sequentially
+    job_statuses = global_queue_processor.add_jobs(jobs)
 
+    count = len(upload_files)
+    msg = f"{count} PDF{'s' if count > 1 else ''} processed via FIFO queue."
     return {
-        "message": f"{file.filename} uploaded successfully."
+        "message": msg,
+        "jobs": job_statuses
     }
+
+
+@app.get("/upload/status")
+def get_upload_status(
+    chat_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Returns real-time processing status for documents queued in this chat."""
+    return global_queue_processor.get_chat_job_statuses(chat_id)
 
 # -----------------------------
 # List Uploaded PDFs

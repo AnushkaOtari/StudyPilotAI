@@ -41,7 +41,6 @@ StudyPilot combines Retrieval-Augmented Generation (RAG), semantic search, and a
 * 🤔 "Still Confused?" adaptive tutoring mode
 * 📝 Flashcard generation
 * ❓ Personalized quiz generation
-* 🗺️ Mind map visualization
 * 📈 Learning progress tracking
 * 💬 Interactive React-based study interface
 

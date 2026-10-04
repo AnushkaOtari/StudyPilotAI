@@ -11,9 +11,9 @@ export const ProtectedRoute = ({ children }) => {
         justifyContent: "center",
         alignItems: "center",
         height: "100vh",
-        background: "#0B1120",
-        color: "#F8FAFC",
-        fontFamily: "'Plus Jakarta Sans', sans-serif"
+        background: "#FFFDF5",
+        color: "#111111",
+        fontFamily: "'Lancelot', serif"
       }}>
         <div style={{
           display: "flex",
@@ -24,8 +24,8 @@ export const ProtectedRoute = ({ children }) => {
           <div style={{
             width: "40px",
             height: "40px",
-            border: "3px solid #1F2937",
-            borderTop: "3px solid #2563EB",
+            border: "3px solid #E9E4D5",
+            borderTop: "3px solid #F8E7A1",
             borderRadius: "50%",
             animation: "spin 1s linear infinite"
           }} />

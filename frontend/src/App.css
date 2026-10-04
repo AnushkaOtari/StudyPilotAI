@@ -1,8 +1,6 @@
 /* ==========================================================================
    App Shell Layout
-   Component-level visuals (sidebar, header, upload card, chat, auth) live in
-   their own CSS files next to each component. This file only owns the
-   top-level page skeleton, so it can never fight component styles again.
+   Warm academic workspace layout container.
    ========================================================================== */
 
 .app {
@@ -11,6 +9,7 @@
   width: 100vw;
   overflow: hidden;
   background: var(--bg-main);
+  color: var(--text-main);
 }
 
 .main-content {
@@ -20,6 +19,7 @@
   height: 100vh;
   min-width: 0;
   overflow: hidden;
+  background: var(--bg-main);
 }
 
 .chat-container {
@@ -27,15 +27,16 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 28px 32px 24px;
-  gap: 20px;
-  max-width: 1080px;
+  padding: 24px 32px 20px;
+  gap: 18px;
+  max-width: 1100px;
   width: 100%;
   margin: 0 auto;
 }
 
 @media (max-width: 900px) {
   .chat-container {
-    padding: 18px 16px 16px;
+    padding: 16px 14px 14px;
+    gap: 14px;
   }
 }

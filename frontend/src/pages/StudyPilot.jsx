@@ -23,21 +23,19 @@ function StudyPilot() {
   const storageKeys = useMemo(() => {
     if (!userId) return null;
     return {
-      conversations: `studypilot_${userId}_conve
-      rsations`,
+      conversations: `studypilot_${userId}_conversations`,
       activeChat: `studypilot_${userId}_active_chat`,
       selectedPdf: `studypilot_${userId}_selected_pdf`,
     };
   }, [userId]);
 
-  
-
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   
-  // File upload state
-  const [file, setFile] = useState(null);
+  // File upload state for multiple PDFs
+  const [files, setFiles] = useState([]);
+  const [queueJobs, setQueueJobs] = useState([]);
   const [uploadStatus, setUploadStatus] = useState("");
   const [uploading, setUploading] = useState(false);
 
@@ -85,11 +83,11 @@ function StudyPilot() {
     const activeChatExists = loadedConversations.some((c) => c.id === parsedActiveChat);
     const savedSelectedPdf = localStorage.getItem(storageKeys.selectedPdf);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConversations(loadedConversations);
     setActiveConversationId(activeChatExists ? parsedActiveChat : loadedConversations[0].id);
     setSelectedPdf(savedSelectedPdf || null);
     setUploadedFiles([]);
+    setQueueJobs([]);
   }, [loadUserConversations, storageKeys]);
 
   // Find active conversation and derive currentChatId
@@ -121,7 +119,7 @@ function StudyPilot() {
     }
   }, [selectedPdf, storageKeys]);
 
-  // Fetch already uploaded files from backend
+  // Fetch uploaded files from backend
   const fetchUploadedFiles = async (chatId) => {
     if (!chatId) return;
     try {
@@ -132,10 +130,21 @@ function StudyPilot() {
     }
   };
 
+  // Fetch FIFO document queue processing statuses
+  const fetchQueueStatus = async (chatId) => {
+    if (!chatId) return;
+    try {
+      const response = await api.get("/upload/status", { params: { chat_id: chatId } });
+      setQueueJobs(response.data || []);
+    } catch (error) {
+      console.error("Error fetching queue status:", error);
+    }
+  };
+
   useEffect(() => {
     if (currentChatId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchUploadedFiles(currentChatId);
+      fetchQueueStatus(currentChatId);
     }
   }, [currentChatId]);
 
@@ -154,7 +163,7 @@ function StudyPilot() {
 
   // Delete a conversation
   const deleteConversation = (id, event) => {
-    event.stop+pagation();
+    event.stopPropagation();
     if (conversations.length === 1) {
       // If it's the last chat, clear its messages instead of leaving zero conversations
       const newId = Date.now();
@@ -183,25 +192,29 @@ function StudyPilot() {
     );
   };
 
-  // Upload PDF
+  // Upload Multiple PDFs via FIFO Document Queue
   const uploadPdf = async () => {
-    if (!file) {
-      alert("Please select a PDF first.");
+    if (!files || files.length === 0) {
+      alert("Please select at least one PDF first.");
       return;
     }
 
-    if (uploadedFiles.includes(file.name)) {
-      alert(`A file named "${file.name}" has already been uploaded. Please choose a different file or delete the existing one first.`);
-      setFile(null);
+    const duplicate = files.find((f) => uploadedFiles.includes(f.name));
+    if (duplicate) {
+      alert(
+        `A file named "${duplicate.name}" has already been uploaded. Please remove it from your selection or delete the existing one first.`
+      );
       return;
     }
 
     setUploading(true);
-    setUploadStatus("Uploading PDF...");
+    setUploadStatus("Uploading PDFs to queue...");
 
     const formData = new FormData();
-    formData.append("file", file);
     formData.append("chat_id", currentChatId);
+    files.forEach((f) => {
+      formData.append("files", f);
+    });
 
     try {
       const response = await api.post("/upload", formData, {
@@ -209,10 +222,13 @@ function StudyPilot() {
       });
       const data = response.data;
       setUploadStatus(data.message);
+      if (data.jobs) {
+        setQueueJobs(data.jobs);
+      }
       
       // Refresh the uploaded file list
       await fetchUploadedFiles(currentChatId);
-      setFile(null);
+      setFiles([]);
     } catch (error) {
       console.error(error);
       setUploadStatus("Upload failed. Verify backend is running.");
@@ -230,6 +246,7 @@ function StudyPilot() {
         params: { chat_id: currentChatId },
       });
       await fetchUploadedFiles(currentChatId);
+      await fetchQueueStatus(currentChatId);
       // If the active scope was the deleted PDF, reset scope
       if (selectedPdf === filename) {
         setSelectedPdf(null);
@@ -317,6 +334,7 @@ function StudyPilot() {
       setLoading(false);
     }
   };
+
   return (
     <div className="app">
       <Sidebar
@@ -338,11 +356,12 @@ function StudyPilot() {
 
         <div className="chat-container">
           <UploadBox
-            file={file}
-            setFile={setFile}
+            files={files}
+            setFiles={setFiles}
             uploadPdf={uploadPdf}
             uploadStatus={uploadStatus}
             uploading={uploading}
+            queueJobs={queueJobs}
           />
 
           <ChatBox

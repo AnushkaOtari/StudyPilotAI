@@ -3,7 +3,6 @@ import QuizPage from "./pages/QuizPage";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import StudyPilot from "./pages/StudyPilot.jsx";
-import MindMapPage from "./pages/MindMapPage.jsx";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { useAuth } from "./hooks/useAuth";
@@ -19,9 +18,9 @@ function App() {
           justifyContent: "center",
           alignItems: "center",
           height: "100vh",
-          background: "#0B1120",
-          color: "#F8FAFC",
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          background: "#FFFDF5",
+          color: "#111111",
+          fontFamily: "'Lancelot', serif",
         }}
       >
         <div
@@ -36,8 +35,8 @@ function App() {
             style={{
               width: "40px",
               height: "40px",
-              border: "3px solid #1F2937",
-              borderTop: "3px solid #2563EB",
+              border: "3px solid #E9E4D5",
+              borderTop: "3px solid #F8E7A1",
               borderRadius: "50%",
               animation: "spin 0.9s linear infinite",
             }}
@@ -82,29 +81,18 @@ function App() {
       />
 
       <Route
-        path="*"
-        element={<Navigate to="/" replace />}
-      />
-
-      <Route
         path="/quiz"
         element={
           <ProtectedRoute>
             <QuizPage />
           </ProtectedRoute>
-        
         }
       />
 
       <Route
-        path="/mindmap"
-        element={
-          <ProtectedRoute>
-            <MindMapPage />
-          </ProtectedRoute>
-        }
+        path="*"
+        element={<Navigate to="/" replace />}
       />
-      
     </Routes>
   );
 }

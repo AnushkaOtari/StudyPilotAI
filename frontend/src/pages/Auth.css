@@ -6,9 +6,6 @@
   justify-content: center;
   padding: 28px;
   background-color: var(--bg-main);
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.16), transparent 45%),
-    radial-gradient(circle at 82% 78%, rgba(37, 99, 235, 0.10), transparent 45%);
 }
 
 .auth-card {
@@ -17,31 +14,31 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  background: rgba(17, 24, 39, 0.75);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid var(--border-color-light);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   padding: 36px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .auth-heading p {
-  color: var(--accent-light);
+  color: var(--text-muted);
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.4px;
+  font-size: 16px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .auth-heading h1 {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--text-main);
-  margin-bottom: 8px;
-  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+  line-height: 1.15;
 }
 
 .auth-heading span {
@@ -52,16 +49,17 @@
 .auth-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   color: var(--text-main);
-  font-weight: 600;
-  font-size: 13.5px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
 }
 
 .auth-field input,
 .password-field input {
   width: 100%;
-  height: 50px;
+  height: 48px;
   background: var(--bg-card-alt);
   color: var(--text-main);
   border: 1px solid var(--border-color);
@@ -69,6 +67,7 @@
   padding: 0 15px;
   font-size: 14.5px;
   font-weight: 400;
+  font-family: var(--font-sans);
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -80,7 +79,7 @@
 .auth-field input:focus,
 .password-field input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-glow);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .password-field {
@@ -104,7 +103,7 @@
   background: transparent;
   color: var(--text-muted);
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: color 0.2s ease, background 0.2s ease;
 }
@@ -115,34 +114,34 @@
 }
 
 .auth-submit {
-  height: 52px;
-  border: none;
+  height: 50px;
+  border: 1px solid #F2D873;
   border-radius: var(--radius-sm);
   background: var(--accent);
-  color: white;
-  font-size: 15px;
+  color: var(--text-main);
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: 700;
   cursor: pointer;
   margin-top: 4px;
-  transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .auth-submit:hover:not(:disabled) {
   background: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.32);
+  transform: translateY(-1px);
 }
 
 .auth-submit:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
   transform: none;
 }
 
 .auth-error {
-  color: #FCA5A5;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
   padding: 12px 14px;
   border-radius: var(--radius-sm);
   font-size: 13.5px;
@@ -155,19 +154,20 @@
 }
 
 .auth-switch a {
-  color: var(--accent-light);
+  color: var(--text-main);
   font-weight: 700;
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .auth-switch a:hover {
-  text-decoration: underline;
+  color: var(--text-main);
 }
 
 @keyframes authFade {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;

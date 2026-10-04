@@ -1,47 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lexend:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lancelot&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 :root {
-  /* ---------------- Premium Dark Theme Color Palette ---------------- */
-  --bg-main: #0B1120;         /* Darkest slate-blue background */
-  --bg-sidebar: #0A0F1D;      /* Slightly deeper sidebar/header for visual depth */
-  --bg-card: #111827;         /* Standard panel/card color */
-  --bg-card-alt: #0F172A;     /* Inset surfaces (inputs, chips) */
-  --bg-card-hover: #1A2333;   /* Hovered card surface */
-  --bg-hover: rgba(148, 163, 184, 0.08); /* Generic subtle hover wash */
+  /* ---------------- Warm Academic Color Palette ---------------- */
+  --bg-main: #FFFDF5;         /* Warm background */
+  --bg-sidebar: #FFFFFF;      /* Clean white sidebar */
+  --bg-surface: #FFFFFF;      /* Pure white card surface */
+  --bg-card: #FFFFFF;         /* Card background */
+  --bg-card-alt: #FFFDF5;     /* Warm inset surface */
+  --bg-card-hover: #FFF8DD;   /* Soft yellow hover surface */
+  --bg-hover: rgba(248, 231, 161, 0.25); /* Subtle butter yellow wash */
 
-  --accent: #2563EB;          /* Primary accent blue */
-  --accent-hover: #1D4ED8;    /* Hover state for accent blue */
-  --accent-light: #60A5FA;    /* Light accent for text/links */
-  --accent-glow: rgba(37, 99, 235, 0.18); /* Soft outer glow */
+  --accent: #F8E7A1;          /* Butter yellow accent */
+  --accent-hover: #F2DA76;    /* Hover state for butter yellow */
+  --accent-light: #FFF4C7;    /* Light butter yellow */
+  --accent-soft: #FFF8DD;     /* Soft yellow highlight */
+  --accent-glow: rgba(248, 231, 161, 0.35);
 
-  --text-main: #F8FAFC;       /* Off-white readable text */
-  --text-muted: #94A3B8;      /* Muted text for descriptions/subtitles */
-  --text-faint: #64748B;      /* Even quieter text */
+  --text-main: #111111;       /* Deep black readable text */
+  --text-muted: #5F5A4F;      /* Soft warm secondary text */
+  --text-faint: #8C867A;      /* Quiet metadata text */
 
-  --border-color: #1F2937;    /* Clean thin borders */
-  --border-color-light: rgba(255, 255, 255, 0.08);
-  --danger: #EF4444;
+  --border-color: #E9E4D5;    /* Clean warm subtle borders */
+  --border-color-light: #F4EFE2;
+  --border-color-hover: #D8D2C2;
+  --danger: #DC2626;
 
-  --scrollbar-thumb: #374151; /* Custom scrollbar color */
+  --scrollbar-thumb: #E9E4D5; /* Warm scrollbar thumb */
 
   /* ---------------- Shape & Elevation ---------------- */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 26px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
 
-  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.32);
-  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 8px 24px rgba(37, 99, 235, 0.28);
+  --shadow-sm: 0 2px 8px rgba(95, 90, 79, 0.04);
+  --shadow-md: 0 6px 20px rgba(95, 90, 79, 0.06);
+  --shadow-lg: 0 12px 36px rgba(95, 90, 79, 0.08);
 
   /* ---------------- Typography ---------------- */
+  --font-display: 'Lancelot', serif;
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --font-display: 'Lexend', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   font-family: var(--font-sans);
-  color-scheme: dark;
+  color-scheme: light;
   background-color: var(--bg-main);
   color: var(--text-main);
 
@@ -57,15 +59,17 @@
 
 body {
   background-color: var(--bg-main);
-  background-image:
-    radial-gradient(circle at 12% 8%, rgba(37, 99, 235, 0.10), transparent 42%),
-    radial-gradient(circle at 88% 92%, rgba(37, 99, 235, 0.06), transparent 45%);
-  background-attachment: fixed;
   color: var(--text-main);
   font-family: var(--font-sans);
   overflow: hidden;
   height: 100vh;
   width: 100vw;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  color: var(--text-main);
+  letter-spacing: 0.2px;
 }
 
 #root {
@@ -76,17 +80,18 @@ body {
   overflow: hidden;
 }
 
-button, input, textarea {
-  font-family: inherit;
+button, input, textarea, select {
+  font-family: var(--font-sans);
 }
 
-/* Accessible focus ring, respected across interactive elements */
+/* Accessible focus ring */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
+select:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid var(--accent-light);
+  outline: 2px solid var(--text-main);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -107,7 +112,7 @@ textarea:focus-visible,
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4B5563;
+  background: #D8D2C2;
 }
 
 /* ---------------- Keyframes ---------------- */
@@ -119,22 +124,11 @@ textarea:focus-visible,
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(0.85);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 1;
   }
 }
 
@@ -143,11 +137,11 @@ textarea:focus-visible,
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-spin {
