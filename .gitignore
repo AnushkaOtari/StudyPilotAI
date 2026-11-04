@@ -1,7 +1,46 @@
+
+# ==============================
+# Python
+# ==============================
 venv/
-.env
+.venv/
 __pycache__/
-*.pyc
-node_modules/
-dist/
+*.py[cod]
+.pytest_cache/
+
+# ==============================
+# Environment variables / secrets
+# ==============================
+.env
+.env.*
+!.env.example
+
+# ==============================
+# User uploaded files
+# ==============================
+backend/uploads/
+
+# ==============================
+# Generated FAISS vector stores
+# ==============================
+backend/vectorstores/
+vectorstores/
+
+# ==============================
+# Generated databases
+# ==============================
+*.db
+*.sqlite
+*.sqlite3
+
+# ==============================
+# Logs
+# ==============================
+*.log
+
+# ==============================
+# OS / editor
+# ==============================
+.DS_Store
+Thumbs.db
 .vscode/
