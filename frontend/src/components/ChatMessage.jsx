@@ -2,10 +2,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 
+import CitationChips from "./CitationChips";
+
 import "highlight.js/styles/github-dark.css";
 import "./ChatBox.css";
 
-function ChatMessage({ role, text }) {
+function ChatMessage({ role, text, citations }) {
   const isUser = role === "user";
 
   return (
@@ -27,6 +29,8 @@ function ChatMessage({ role, text }) {
             {text}
           </ReactMarkdown>
         </div>
+
+        {!isUser && <CitationChips citations={citations} />}
       </div>
     </div>
   );

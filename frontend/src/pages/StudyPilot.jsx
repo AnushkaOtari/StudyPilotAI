@@ -7,6 +7,7 @@ import Header from "../components/Header";
 import UploadBox from "../components/UploadBox";
 import ChatBox from "../components/ChatBox";
 import ChatInput from "../components/ChatInput";
+import { normalizeCitations } from "../utils/citations";
 
 const createDefaultConversation = () => ({
   id: Date.now(),
@@ -299,7 +300,11 @@ function StudyPilot() {
               ...c,
               messages: [
                 ...c.messages,
-                { role: "assistant", text: data.answer },
+                {
+                  role: "assistant",
+                  text: data.answer,
+                  citations: normalizeCitations(data.citations),
+                },
               ],
             };
           }

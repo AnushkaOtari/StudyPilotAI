@@ -32,6 +32,7 @@ function ChatBox({ messages = [], loading }) {
             key={index}
             role={msg.role}
             text={msg.text}
+            citations={msg.citations}
           />
         ))
       )}

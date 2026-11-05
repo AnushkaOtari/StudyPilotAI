@@ -196,6 +196,57 @@
   font-weight: 700;
 }
 
+/* ---------------- Citation Chips ---------------- */
+
+.citation-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color-light);
+}
+
+.citation-heading {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.citation-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.citation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-main);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+}
+
+.citation-chip span {
+  overflow-wrap: anywhere;
+}
+
+.citation-chip-icon {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  color: var(--text-muted);
+}
+
 /* ---------------- Typing Indicator ---------------- */
 
 .typing-indicator {

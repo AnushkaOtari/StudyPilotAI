@@ -7,6 +7,7 @@ from rag.chunker import chunk_text
 from rag.embedder import get_embedding
 from rag.vector_store import VectorStore
 from rag.qa import answer_question
+from rag.citations import build_citations
 from rag.resource_hash_table import global_resource_hash_table
 
 # -----------------------------
@@ -15,6 +16,9 @@ from rag.resource_hash_table import global_resource_hash_table
 # Every authenticated user's chat gets its own FAISS-backed VectorStore and
 # short conversational history. Both are keyed by user_id + chat_id so data
 # cannot leak between users even if chat ids collide.
+
+# Exact reply the prompt in rag/qa.py requires when the PDF context has no answer.
+NOT_FOUND_ANSWER = "I couldn't find this information in the uploaded notes."
 
 VECTORSTORE_FOLDER = "vectorstores"
 SAFE_SEGMENT_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -174,7 +178,8 @@ def ask_rag(question, user_id, chat_id, filename=None):
     if store is None:
         return {
             "answer": "Please upload a PDF first.",
-            "sources": []
+            "sources": [],
+            "citations": []
         }
 
     key = _store_key(user_id, chat_id)
@@ -246,9 +251,18 @@ def ask_rag(question, user_id, chat_id, filename=None):
         )
     )
 
+    # Citations come from the chunks that were actually retrieved, never from
+    # the answer text. When the model gives the fixed "not found" reply, the
+    # retrieved chunks did not support an answer, so nothing is cited.
+    if answer is not None and answer.strip() == NOT_FOUND_ANSWER:
+        citations = []
+    else:
+        citations = build_citations(results)
+
     return {
         "answer": answer,
-        "sources": sources
+        "sources": sources,
+        "citations": citations
     }
 
 

@@ -205,5 +205,6 @@ def ask_question(
     return {
         "question": data.question,
         "answer": response["answer"],
-        "sources": response["sources"]
+        "sources": response["sources"],
+        "citations": response.get("citations", [])
     }
