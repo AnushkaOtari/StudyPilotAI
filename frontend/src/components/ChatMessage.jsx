@@ -7,7 +7,7 @@ import CitationChips from "./CitationChips";
 import "highlight.js/styles/github-dark.css";
 import "./ChatBox.css";
 
-function ChatMessage({ role, text, citations }) {
+function ChatMessage({ role, text, citations, onOpenCitation }) {
   const isUser = role === "user";
 
   return (
@@ -30,7 +30,9 @@ function ChatMessage({ role, text, citations }) {
           </ReactMarkdown>
         </div>
 
-        {!isUser && <CitationChips citations={citations} />}
+        {!isUser && (
+          <CitationChips citations={citations} onOpen={onOpenCitation} />
+        )}
       </div>
     </div>
   );

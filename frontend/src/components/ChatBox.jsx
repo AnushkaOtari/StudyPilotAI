@@ -4,7 +4,7 @@ import { BookOpen } from "lucide-react";
 
 import "./ChatBox.css";
 
-function ChatBox({ messages = [], loading }) {
+function ChatBox({ messages = [], loading, onOpenCitation }) {
   const messagesEndRef = useRef(null);
 
   // Auto-scroll helper
@@ -33,6 +33,7 @@ function ChatBox({ messages = [], loading }) {
             role={msg.role}
             text={msg.text}
             citations={msg.citations}
+            onOpenCitation={onOpenCitation}
           />
         ))
       )}

@@ -3,6 +3,8 @@ import os
 from dotenv import load_dotenv
 from google import genai
 
+from rag.citations import parse_source_refs
+
 load_dotenv()
 
 client = genai.Client(
@@ -10,7 +12,7 @@ client = genai.Client(
 )
 
 
-def answer_question(question, context, chat_history, mode):
+def _build_prompt(question, context, chat_history, mode, include_source_refs=False):
 
     # -----------------------------
     # Answer Mode
@@ -64,6 +66,20 @@ Explain clearly and naturally.
     # Gemini Prompt
     # -----------------------------
 
+    source_reference_rules = ""
+    if include_source_refs:
+        source_reference_rules = """
+SOURCE REFERENCES:
+- Each block of the CURRENT PDF CONTEXT starts with a reference label such as [S1].
+- These labels are valid only for the CURRENT PDF CONTEXT above. Never use labels from the conversation history.
+- Do not write reference labels inside your answer text.
+- After your answer, add one final line in exactly this format:
+  SOURCE_REFS: S1, S3
+  List only the labels of the context blocks whose content you actually used to write the answer.
+- If your answer does not use the PDF context (including when you reply that you couldn't find the information), write:
+  SOURCE_REFS: NONE
+"""
+
     prompt = f"""
 You are StudyPilot AI, an AI learning assistant.
 
@@ -97,9 +113,14 @@ RULES:
 - Explain naturally like a teacher.
 - Do not copy the textbook word-for-word.
 - Do not unnecessarily repeat the entire previous answer.
-
+{source_reference_rules}
 Answer:
 """
+
+    return prompt
+
+
+def _generate(prompt):
 
     # -----------------------------
     # Gemini API
@@ -111,3 +132,24 @@ Answer:
     )
 
     return response.text
+
+
+def answer_question(question, context, chat_history, mode):
+    """Answer a question and return the answer text (original contract)."""
+
+    prompt = _build_prompt(question, context, chat_history, mode)
+    return _generate(prompt)
+
+
+def answer_question_with_sources(question, context, chat_history, mode):
+    """Answer a question and report which context blocks the model used.
+
+    Returns (answer_text, claimed_refs). `claimed_refs` are the labels (S1, S2,
+    ...) the model says it used. They are NOT verified here; rag_pipeline
+    validates them against the chunks that were actually retrieved.
+    """
+
+    prompt = _build_prompt(
+        question, context, chat_history, mode, include_source_refs=True
+    )
+    return parse_source_refs(_generate(prompt))

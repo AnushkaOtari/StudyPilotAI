@@ -9,3 +9,8 @@ afterEach(() => {
 
 // jsdom does not implement scrollIntoView (ChatBox auto-scrolls).
 window.HTMLElement.prototype.scrollIntoView = function () {};
+
+// jsdom has no canvas implementation; the PDF viewer only needs a 2D context object.
+window.HTMLCanvasElement.prototype.getContext = function () {
+  return {};
+};

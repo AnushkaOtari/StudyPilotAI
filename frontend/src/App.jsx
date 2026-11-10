@@ -1,10 +1,10 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import QuizPage from "./pages/QuizPage";
-import Login from "./pages/Login.jsx";
-import Register from "./pages/Register.jsx";
+import Login from "./pages/login.jsx";
+import Register from "./pages/register.jsx";
 import StudyPilot from "./pages/StudyPilot.jsx";
 
-import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ProtectedRoute from "./components/protectedroute.jsx";
 import { useAuth } from "./hooks/useAuth";
 
 function App() {

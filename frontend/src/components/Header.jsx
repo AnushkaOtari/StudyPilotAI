@@ -1,10 +1,23 @@
 import "./header.css";
 import logo from "../assets/logo.png";
-import { Layers, FileText } from "lucide-react";
+import { Layers, FileText, Menu } from "lucide-react";
 
-function Header({ activePdf }) {
+function Header({ activePdf, onMenuClick, menuOpen = false }) {
   return (
     <header className="header animate-fade-in">
+      {onMenuClick && (
+        <button
+          type="button"
+          className="menu-btn"
+          onClick={onMenuClick}
+          aria-label="Open navigation menu"
+          aria-expanded={menuOpen}
+          aria-controls="app-sidebar"
+        >
+          <Menu size={20} />
+        </button>
+      )}
+
       <div className="brand">
         <img
           src={logo}

@@ -331,3 +331,34 @@
     align-items: flex-start;
   }
 }
+
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 768px) {
+  .upload-box {
+    padding: 18px 16px;
+  }
+
+  .upload-dropzone {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .file-chip-name {
+    max-width: 120px;
+  }
+
+  .job-filename {
+    max-width: 160px;
+  }
+
+  .button-group {
+    width: 100%;
+  }
+
+  .file-picker,
+  .upload-btn {
+    flex: 1 1 auto;
+  }
+}

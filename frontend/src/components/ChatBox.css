@@ -222,11 +222,18 @@
   padding: 0;
 }
 
+.citation-item {
+  display: flex;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .citation-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   max-width: 100%;
+  min-width: 0;
   padding: 3px 10px;
   font-size: 12.5px;
   line-height: 1.5;
@@ -234,6 +241,23 @@
   background: var(--accent-soft);
   border: 1px solid var(--accent);
   border-radius: 999px;
+}
+
+.citation-chip-button {
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.citation-chip-button:hover {
+  background: var(--accent-light);
+  border-color: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.citation-chip-button:active {
+  transform: translateY(0);
 }
 
 .citation-chip span {
@@ -275,5 +299,33 @@
 @media (max-width: 640px) {
   .chat-message {
     max-width: 92%;
+  }
+}
+
+/* ---------------- Responsive ---------------- */
+
+.chat-message,
+.markdown-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.markdown-content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .chat-box {
+    padding: 16px 12px 4px;
+  }
+
+  .chat-empty-state {
+    padding: 24px 8px;
+  }
+
+  .chat-empty-state h3 {
+    font-size: 21px;
   }
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
+import { vi } from "vitest";
 import ChatBox from "../src/components/ChatBox";
 
 const cite = (filename, page, id = "source_1") => ({ id, filename, page, text: "evidence" });
@@ -85,7 +86,7 @@ describe("citation chips in ChatBox", () => {
     expect(container.querySelector(".citation-section")).toBeNull();
   });
 
-  it("chips are read-only labels (no PDF viewer exists yet)", () => {
+  it("chips are plain labels when no open handler is provided", () => {
     render(<ChatBox messages={[
       { role: "assistant", text: "Answer", citations: [cite("A.pdf", 1)] },
     ]} />);
@@ -96,5 +97,57 @@ describe("citation chips in ChatBox", () => {
   it("still shows the welcome state with no messages", () => {
     render(<ChatBox messages={[]} />);
     expect(screen.getByText("Welcome to StudyPilot AI")).toBeInTheDocument();
+  });
+
+  describe("clickable chips", () => {
+    it("renders each chip as a button and opens the exact citation that was clicked", () => {
+      const onOpen = vi.fn();
+      const a = { id: "source_1", filename: "Understanding Companies.pdf", page: 9, text: "t1" };
+      const b = { id: "source_2", filename: "Tax Basics.pdf", page: 2, text: "t2" };
+      render(<ChatBox onOpenCitation={onOpen} messages={[
+        { role: "assistant", text: "Answer", citations: [a, b] },
+      ]} />);
+      const buttons = screen.getAllByRole("button");
+      expect(buttons.map((x) => x.textContent)).toEqual([
+        "Understanding Companies.pdf — p. 9", "Tax Basics.pdf — p. 2"]);
+      fireEvent.click(buttons[1]);
+      expect(onOpen).toHaveBeenCalledTimes(1);
+      expect(onOpen).toHaveBeenCalledWith(b);
+      fireEvent.click(buttons[0]);
+      expect(onOpen).toHaveBeenLastCalledWith(a);
+    });
+
+    it("the same page cited twice is one chip and opens the first citation", () => {
+      const onOpen = vi.fn();
+      const first = { id: "source_1", filename: "A.pdf", page: 4, text: "one" };
+      render(<ChatBox onOpenCitation={onOpen} messages={[
+        { role: "assistant", text: "Answer", citations: [
+          first, { id: "source_2", filename: "A.pdf", page: 4, text: "two" }] },
+      ]} />);
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      fireEvent.click(screen.getByRole("button"));
+      expect(onOpen).toHaveBeenCalledWith(first);
+    });
+
+    it("a citation without a filename stays a plain label", () => {
+      render(<ChatBox onOpenCitation={vi.fn()} messages={[
+        { role: "assistant", text: "Answer", citations: [
+          { id: "source_1", filename: null, page: 7, text: "t" },
+          { id: "source_2", filename: "Real.pdf", page: null, text: "t" }] },
+      ]} />);
+      expect(screen.getByText("p. 7").closest("button")).toBeNull();
+      expect(screen.getByText("Real.pdf").closest("button")).not.toBeNull();
+    });
+
+    it("chips from different answers open their own citation", () => {
+      const onOpen = vi.fn();
+      render(<ChatBox onOpenCitation={onOpen} messages={[
+        { role: "assistant", text: "first", citations: [{ id: "source_1", filename: "A.pdf", page: 1, text: "x" }] },
+        { role: "assistant", text: "second", citations: [{ id: "source_1", filename: "B.pdf", page: 5, text: "y" }] },
+      ]} />);
+      const bubbles = [...document.querySelectorAll(".ai-message")];
+      fireEvent.click(within(bubbles[1]).getByRole("button"));
+      expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ filename: "B.pdf", page: 5 }));
+    });
   });
 });

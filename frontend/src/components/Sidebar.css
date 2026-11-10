@@ -384,3 +384,105 @@
   margin-top: 4px;
   text-align: center;
 }
+
+/* ---------------- Responsive ---------------- */
+
+/* Mobile-only controls are hidden on larger screens. */
+.sidebar-close-btn,
+.sidebar-backdrop {
+  display: none;
+}
+
+.profile-info {
+  min-width: 0;
+}
+
+.profile-info h3,
+.profile-info p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tablet: narrower sidebar. */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 250px;
+    padding: 16px;
+    gap: 14px;
+  }
+}
+
+/* Mobile: the sidebar is a slide-in drawer opened from the header menu button. */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(86vw, 320px);
+    z-index: 40;
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-100%);
+    visibility: hidden; /* keeps the closed drawer out of the tab order */
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.25s;
+  }
+
+  .sidebar.open {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
+  }
+
+  @supports (height: 100dvh) {
+    .sidebar {
+      height: 100dvh;
+    }
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(17, 17, 17, 0.4);
+  }
+
+  .sidebar-logo {
+    position: relative;
+    padding-right: 40px;
+  }
+
+  .sidebar-close-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+
+  .sidebar-close-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-main);
+  }
+
+  .chat-item-wrapper,
+  .pdf-item-wrapper {
+    padding: 10px;
+  }
+}
+
+/* Touch screens have no hover, so keep the delete buttons reachable. */
+@media (hover: none) {
+  .delete-item-btn {
+    opacity: 0.6;
+  }
+}

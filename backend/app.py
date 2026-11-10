@@ -1,9 +1,11 @@
 import os
 import re
+from urllib.parse import quote
 from routes.quiz import router as quiz_router
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from models import QuestionRequest
 from rag.rag_pipeline import ask_rag, delete_pdf_and_rebuild
 from rag.document_queue import global_queue_processor, DocumentJob
@@ -16,9 +18,15 @@ app = FastAPI()
 app.include_router(auth_router)
 app.include_router(quiz_router)
 
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,6 +68,31 @@ def safe_upload_path(upload_folder: str, filename: str) -> str:
             detail="Only PDF filenames are allowed.",
         )
     return os.path.join(upload_folder, basename)
+
+def resolve_user_pdf_path(user_id: int, chat_id: str, filename: str) -> str:
+    """Return the real path of one PDF that belongs to this user's chat.
+
+    The path is built only from the authenticated user's id, a validated chat
+    id and a validated PDF filename (never from a client-supplied path), and
+    must resolve to a regular file directly inside that chat's folder.
+    Folders are not created here: a read must not change the filesystem.
+    """
+    if not SAFE_SEGMENT_RE.match(chat_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid chat id.",
+        )
+    folder = os.path.join(BASE_UPLOAD_FOLDER, f"user_{user_id}", f"chat_{chat_id}")
+    candidate = safe_upload_path(folder, filename)
+
+    real_folder = os.path.realpath(folder)
+    real_path = os.path.realpath(candidate)
+    if os.path.dirname(real_path) != real_folder or not os.path.isfile(real_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="PDF not found in this chat.",
+        )
+    return real_path
 
 # -----------------------------
 # Home Route
@@ -166,6 +199,30 @@ def list_files(chat_id: str, current_user: User = Depends(get_current_user)):
     upload_folder = get_user_chat_upload_folder(current_user.id, chat_id)
     files = [f for f in os.listdir(upload_folder) if f.lower().endswith(".pdf")]
     return files
+
+# -----------------------------
+# View PDF (used by citation links)
+# -----------------------------
+# A PDF is identified by (authenticated user, chat id, filename). Uploading
+# the same filename again to the same chat overwrites the same file, so the
+# filename is unique within a chat; other chats and users live in other folders.
+
+@app.get("/files/{filename}")
+def get_file(
+    filename: str,
+    chat_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    path = resolve_user_pdf_path(current_user.id, chat_id, filename)
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename*=UTF-8''{quote(filename)}",
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 # -----------------------------
 # Delete PDF

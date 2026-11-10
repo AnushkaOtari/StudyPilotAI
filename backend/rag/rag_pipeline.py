@@ -6,8 +6,8 @@ from rag.pdf_reader import extract_text, extract_text_by_page
 from rag.chunker import chunk_text
 from rag.embedder import get_embedding
 from rag.vector_store import VectorStore
-from rag.qa import answer_question
-from rag.citations import build_citations
+from rag.qa import answer_question_with_sources
+from rag.citations import format_context, resolve_citations
 from rag.resource_hash_table import global_resource_hash_table
 
 # -----------------------------
@@ -163,10 +163,9 @@ def retrieve_context(query, user_id, chat_id, filename=None, k=8):
     else:
         results = store.search(query_embedding, k=k)
 
-    context = "\n\n".join(
-        f"Source: {doc['source']} (Page {doc['page']})\n{doc['text']}"
-        for doc in results
-    )
+    # Each chunk is labelled [S1], [S2], ... for this request so the model can
+    # say which blocks it used (see rag/citations.py).
+    context = format_context(results)
 
     return context, results
 
@@ -224,7 +223,7 @@ def ask_rag(question, user_id, chat_id, filename=None):
 
     start = time.time()
 
-    answer = answer_question(
+    answer, claimed_refs = answer_question_with_sources(
         question,
         context,
         chat_history,
@@ -251,13 +250,18 @@ def ask_rag(question, user_id, chat_id, filename=None):
         )
     )
 
-    # Citations come from the chunks that were actually retrieved, never from
-    # the answer text. When the model gives the fixed "not found" reply, the
-    # retrieved chunks did not support an answer, so nothing is cited.
+    # Citations: only references that the model named AND that label a chunk
+    # which was really retrieved for this request. Filename, page and text come
+    # from the retrieved chunk, never from the model. Retrieval alone is not
+    # evidence, so an answer with no valid reference has no citations. The
+    # fixed "not found" reply never cites anything.
     if answer is not None and answer.strip() == NOT_FOUND_ANSWER:
         citations = []
     else:
-        citations = build_citations(results)
+        resolved = resolve_citations(results, claimed_refs)
+        citations = resolved["citations"]
+        if resolved["invalid_refs"]:
+            print(f"Ignored invalid source references: {resolved['invalid_refs']}")
 
     return {
         "answer": answer,

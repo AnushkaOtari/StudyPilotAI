@@ -395,3 +395,24 @@
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
 }
+
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 640px) {
+  .quiz-page-container {
+    padding: 16px 12px;
+  }
+
+  .quiz-card {
+    padding: 20px 16px;
+  }
+
+  .quiz-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .quiz-title {
+    font-size: 22px;
+  }
+}

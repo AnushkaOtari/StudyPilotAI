@@ -6,6 +6,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import { 
+  X,
   Plus, 
   MessageSquare, 
   BookOpen, 
@@ -28,6 +29,8 @@ function Sidebar({
   onSelectPdf,
   onDeletePdf,
   currentChatId,
+  isOpen = false,
+  onClose,
 }) {
 
   const [showSettings, setShowSettings] = useState(false);
@@ -44,7 +47,10 @@ function Sidebar({
     navigate("/login");
 };
   return (
-    <div className="sidebar animate-fade-in">
+    <div
+      id="app-sidebar"
+      className={`sidebar animate-fade-in${isOpen ? " open" : ""}`}
+    >
       {/* Brand Header */}
       <div className="sidebar-logo">
         <img
@@ -56,6 +62,17 @@ function Sidebar({
           <h2>StudyPilot AI</h2>
           <p>Intelligent Study Companion</p>
         </div>
+
+        {onClose && (
+          <button
+            type="button"
+            className="sidebar-close-btn"
+            onClick={onClose}
+            aria-label="Close navigation menu"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* User Profile Card */}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import "../App.css";
 import api from "../services/api";
 import useAuth from "../hooks/useAuth";
@@ -8,6 +8,10 @@ import UploadBox from "../components/UploadBox";
 import ChatBox from "../components/ChatBox";
 import ChatInput from "../components/ChatInput";
 import { normalizeCitations } from "../utils/citations";
+import { canOpenCitation } from "../utils/pdfNavigation";
+
+// pdf.js is only downloaded the first time a citation is opened.
+const PdfViewerModal = lazy(() => import("../components/PdfViewerModal"));
 
 const createDefaultConversation = () => ({
   id: Date.now(),
@@ -42,6 +46,11 @@ function StudyPilot() {
 
   // Selected PDF to scope RAG queries (null means query all notes)
   const [selectedPdf, setSelectedPdf] = useState(null);
+
+  // Navigation drawer (small screens) and the citation PDF viewer
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [viewer, setViewer] = useState(null);
+  const lastFocusRef = useRef(null);
 
   const loadUserConversations = useCallback(() => {
     if (!storageKeys) return [createDefaultConversation()];
@@ -83,7 +92,7 @@ function StudyPilot() {
     const parsedActiveChat = savedActiveChat ? Number(savedActiveChat) : null;
     const activeChatExists = loadedConversations.some((c) => c.id === parsedActiveChat);
     const savedSelectedPdf = localStorage.getItem(storageKeys.selectedPdf);
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConversations(loadedConversations);
     setActiveConversationId(activeChatExists ? parsedActiveChat : loadedConversations[0].id);
     setSelectedPdf(savedSelectedPdf || null);
@@ -120,6 +129,43 @@ function StudyPilot() {
     }
   }, [selectedPdf, storageKeys]);
 
+  // Drawer: Esc closes it, and it resets when the screen grows past the
+  // breakpoint where the sidebar is permanently visible.
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
+    const query = window.matchMedia("(min-width: 769px)");
+    const onChange = (event) => {
+      if (event.matches) setSidebarOpen(false);
+    };
+    query.addEventListener?.("change", onChange);
+    return () => query.removeEventListener?.("change", onChange);
+  }, []);
+
+  // Open the cited PDF page of the ACTIVE chat in the viewer.
+  const openCitation = (citation) => {
+    if (!currentChatId || !canOpenCitation(citation)) return;
+    lastFocusRef.current = document.activeElement;
+    setViewer({
+      chatId: currentChatId,
+      filename: citation.filename,
+      page: citation.page,
+    });
+  };
+
+  const closeViewer = () => {
+    setViewer(null);
+    lastFocusRef.current?.focus?.();
+  };
+
   // Fetch uploaded files from backend
   const fetchUploadedFiles = async (chatId) => {
     if (!chatId) return;
@@ -144,6 +190,7 @@ function StudyPilot() {
 
   useEffect(() => {
     if (currentChatId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchUploadedFiles(currentChatId);
       fetchQueueStatus(currentChatId);
     }
@@ -346,18 +393,41 @@ function StudyPilot() {
         currentUser={currentUser}
         conversations={conversations}
         activeConversationId={activeConversationId}
-        onSelectConversation={setActiveConversationId}
-        onCreateConversation={createNewConversation}
+        onSelectConversation={(id) => {
+          setActiveConversationId(id);
+          setSidebarOpen(false);
+        }}
+        onCreateConversation={() => {
+          createNewConversation();
+          setSidebarOpen(false);
+        }}
         onDeleteConversation={deleteConversation}
         uploadedFiles={uploadedFiles}
         selectedPdf={selectedPdf}
-        onSelectPdf={setSelectedPdf}
+        onSelectPdf={(pdf) => {
+          setSelectedPdf(pdf);
+          setSidebarOpen(false);
+        }}
         onDeletePdf={deletePdf}
         currentChatId={currentChatId}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
+      {sidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       <div className="main-content">
-        <Header activePdf={selectedPdf} />
+        <Header
+          activePdf={selectedPdf}
+          onMenuClick={() => setSidebarOpen(true)}
+          menuOpen={sidebarOpen}
+        />
 
         <div className="chat-container">
           <UploadBox
@@ -372,6 +442,7 @@ function StudyPilot() {
           <ChatBox
             messages={activeConversation.messages}
             loading={loading}
+            onOpenCitation={openCitation}
           />
 
           <ChatInput
@@ -382,6 +453,18 @@ function StudyPilot() {
           />
         </div>
       </div>
+
+      {viewer && (
+        <Suspense fallback={null}>
+          <PdfViewerModal
+            key={`${viewer.chatId}|${viewer.filename}|${viewer.page}`}
+            chatId={viewer.chatId}
+            filename={viewer.filename}
+            page={viewer.page}
+            onClose={closeViewer}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
