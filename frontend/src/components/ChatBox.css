@@ -6,9 +6,11 @@
   border-radius: var(--radius-lg);
   padding: 24px 24px 8px;
   overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
-  min-height: 0;
+  /* Never collapses to nothing next to the upload card on short screens. */
+  min-height: min(220px, 35dvh);
 }
 
 /* ---------------- Empty State ---------------- */
@@ -37,14 +39,14 @@
 
 .chat-empty-state h3 {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: var(--font-h3);
   font-weight: 700;
   color: var(--text-main);
 }
 
 .chat-empty-state p {
   max-width: 440px;
-  font-size: 14px;
+  font-size: var(--font-sm);
   line-height: 1.6;
   color: var(--text-muted);
 }
@@ -66,15 +68,16 @@
 
 .chat-message {
   max-width: 82%;
+  min-width: 0;
   padding: 14px 18px;
   border-radius: var(--radius-md);
-  font-size: 14.5px;
+  font-size: var(--font-body);
   line-height: 1.6;
 }
 
 .message-sender {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--font-md);
   font-weight: 700;
   margin-bottom: 4px;
   color: var(--text-main);
@@ -137,13 +140,13 @@
   line-height: 1.25;
 }
 
-.markdown-content h1 { font-size: 20px; }
-.markdown-content h2 { font-size: 18px; }
-.markdown-content h3 { font-size: 16px; }
+.markdown-content h1 { font-size: var(--font-h4); }
+.markdown-content h2 { font-size: var(--font-h5); }
+.markdown-content h3 { font-size: var(--font-base); }
 
 .markdown-content code {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--font-xs);
   background: var(--accent-soft);
   color: var(--text-main);
   padding: 2px 6px;
@@ -157,6 +160,7 @@
   border-radius: var(--radius-sm);
   padding: 14px;
   overflow-x: auto;
+  max-width: 100%;
   margin: 10px 0;
 }
 
@@ -179,7 +183,7 @@
   border-collapse: collapse;
   width: 100%;
   margin: 10px 0;
-  font-size: 13.5px;
+  font-size: var(--font-sm);
 }
 
 .markdown-content th,
@@ -192,7 +196,7 @@
 .markdown-content th {
   background: var(--accent-light);
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--font-md);
   font-weight: 700;
 }
 
@@ -205,7 +209,7 @@
 }
 
 .citation-heading {
-  font-size: 11.5px;
+  font-size: var(--font-caption);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -235,7 +239,7 @@
   max-width: 100%;
   min-width: 0;
   padding: 3px 10px;
-  font-size: 12.5px;
+  font-size: var(--font-caption);
   line-height: 1.5;
   color: var(--text-main);
   background: var(--accent-soft);
@@ -296,12 +300,6 @@
   animation-delay: 0.3s;
 }
 
-@media (max-width: 640px) {
-  .chat-message {
-    max-width: 92%;
-  }
-}
-
 /* ---------------- Responsive ---------------- */
 
 .chat-message,
@@ -316,6 +314,12 @@
   overflow-x: auto;
 }
 
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tablet portrait and phones */
 @media (max-width: 768px) {
   .chat-box {
     padding: 16px 12px 4px;
@@ -325,7 +329,55 @@
     padding: 24px 8px;
   }
 
-  .chat-empty-state h3 {
-    font-size: 21px;
+  .chat-message {
+    max-width: 90%;
+    padding: 12px 14px;
+  }
+
+  .markdown-content th,
+  .markdown-content td {
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-box {
+    padding: 12px 10px 2px;
+  }
+
+  .chat-message {
+    max-width: 96%;
+    padding: 10px 12px;
+  }
+
+  .message-wrapper {
+    margin-bottom: 12px;
+  }
+
+  .markdown-content pre {
+    padding: 10px;
+  }
+
+  /* Multi-line chips read better with softer corners than a full pill. */
+  .citation-chip {
+    border-radius: 14px;
+  }
+}
+
+/* Short screens: less vertical padding inside the chat box */
+@media (max-height: 720px) {
+  .chat-box {
+    padding-top: 16px;
+  }
+
+  .chat-empty-state {
+    padding: 16px 12px;
+    gap: 10px;
+  }
+
+  .chat-empty-icon {
+    width: 40px;
+    height: 40px;
+    padding: 10px;
   }
 }

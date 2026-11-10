@@ -2,6 +2,8 @@
 
 .sidebar {
   width: 290px;
+  max-width: 100%;
+  min-width: 0;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   padding: 20px;
@@ -9,9 +11,14 @@
   flex-direction: column;
   gap: 18px;
   height: 100vh;
+  height: 100dvh;
   flex-shrink: 0;
   z-index: 10;
   box-shadow: 2px 0 12px rgba(95, 90, 79, 0.02);
+  /* Fallback for very short screens: the whole sidebar scrolls rather than
+     squeezing the lists to nothing. */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ---------------- Logo & Branding ---------------- */
@@ -32,7 +39,7 @@
 
 .sidebar-logo-text h2 {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--font-h3);
   font-weight: 700;
   letter-spacing: 0.2px;
   color: var(--text-main);
@@ -40,7 +47,7 @@
 }
 
 .sidebar-logo-text p {
-  font-size: 11.5px;
+  font-size: var(--font-xs);
   color: var(--text-muted);
   line-height: 1.2;
   margin-top: 2px;
@@ -81,7 +88,7 @@
 
 .profile-info h3 {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--font-sm);
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
@@ -89,7 +96,7 @@
 }
 
 .profile-info p {
-  font-size: 11px;
+  font-size: var(--font-xs);
   color: var(--text-muted);
   margin-top: 1px;
 }
@@ -108,7 +115,7 @@
   padding: 11px 16px;
   border-radius: var(--radius-md);
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: var(--font-button);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
@@ -165,23 +172,26 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
 }
 
-.quiz-title {
+/* Scoped: the Quiz page has its own .quiz-title heading. */
+.sidebar-quiz-card .quiz-title {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--font-sm);
   font-weight: 700;
   color: var(--text-main);
 }
 
-.quiz-subtitle {
-  font-size: 11px;
+.sidebar-quiz-card .quiz-subtitle {
+  font-size: var(--font-xs);
   color: var(--text-muted);
   margin-top: 1px;
   font-family: var(--font-sans);
 }
 
 .quiz-arrow {
+  flex-shrink: 0;
   color: var(--text-muted);
   transition: transform 0.2s ease, color 0.2s ease;
 }
@@ -195,6 +205,7 @@
 
 .sidebar-scrollable {
   flex: 1;
+  min-height: 120px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -204,6 +215,7 @@
 }
 
 .sidebar-section {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -220,7 +232,7 @@
 
 .section-title h4 {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: var(--font-label);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -252,7 +264,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13.5px;
+  font-size: var(--font-sm);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -331,7 +343,7 @@
 
 /* Empty section styling */
 .empty-section-text {
-  font-size: 12px;
+  font-size: var(--font-xs);
   color: var(--text-faint);
   font-style: italic;
   padding: 6px 10px;
@@ -340,6 +352,7 @@
 /* ---------------- Footer / Settings ---------------- */
 
 .sidebar-footer {
+  flex-shrink: 0;
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid var(--border-color);
@@ -355,7 +368,7 @@
   border: 1px solid transparent;
   color: var(--text-muted);
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--font-button);
   font-weight: 700;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -374,7 +387,7 @@
 
 /* ---------------- Count Badge ---------------- */
 .pdf-count-badge {
-  font-size: 11px;
+  font-size: var(--font-xs);
   font-weight: 600;
   color: var(--text-main);
   background: var(--accent-soft);
@@ -404,16 +417,64 @@
   white-space: nowrap;
 }
 
-/* Tablet: narrower sidebar. */
-@media (max-width: 1024px) {
+/* Touch screens have no hover, so keep the delete buttons reachable. */
+@media (hover: none) {
+  .delete-item-btn {
+    opacity: 0.6;
+  }
+}
+
+/* Laptops and below (1200px) */
+@media (max-width: 1200px) {
   .sidebar {
     width: 250px;
+    min-width: 0;
     padding: 16px;
     gap: 14px;
   }
 }
 
-/* Mobile: the sidebar is a slide-in drawer opened from the header menu button. */
+/* Short screens: compact the fixed top block so the lists keep some room */
+@media (max-height: 720px) {
+  .sidebar {
+    padding-top: 14px;
+    padding-bottom: 12px;
+    gap: 10px;
+  }
+
+  .sidebar-logo {
+    padding-bottom: 2px;
+  }
+
+  .sidebar-logo-img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .profile-card {
+    padding: 7px 10px;
+  }
+
+  .new-chat-btn {
+    padding: 8px 14px;
+  }
+
+  .sidebar-quiz-card {
+    margin: 0;
+    padding: 7px 10px;
+  }
+
+  .sidebar-scrollable {
+    gap: 12px;
+  }
+
+  .sidebar-footer {
+    padding-top: 8px;
+  }
+}
+
+/* Tablet portrait and phones: the sidebar is a slide-in drawer opened from the
+   header menu button. */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
@@ -421,6 +482,8 @@
     left: 0;
     bottom: 0;
     width: min(86vw, 320px);
+    padding: 16px;
+    gap: 14px;
     z-index: 40;
     box-shadow: var(--shadow-lg);
     transform: translateX(-100%);
@@ -434,12 +497,6 @@
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
   }
 
-  @supports (height: 100dvh) {
-    .sidebar {
-      height: 100dvh;
-    }
-  }
-
   .sidebar-backdrop {
     display: block;
     position: fixed;
@@ -450,15 +507,21 @@
 
   .sidebar-logo {
     position: relative;
+    gap: 10px;
     padding-right: 40px;
+  }
+
+  .sidebar-logo-img {
+    width: 32px;
+    height: 32px;
   }
 
   .sidebar-close-btn {
     position: absolute;
     top: 0;
     right: 0;
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -474,15 +537,140 @@
     color: var(--text-main);
   }
 
+  .profile-card {
+    gap: 10px;
+    padding: 9px 10px;
+  }
+
+  .new-chat-btn {
+    padding: 10px 12px;
+  }
+
+  .sidebar-scrollable {
+    gap: 14px;
+  }
+
+  .sidebar-section {
+    gap: 5px;
+  }
+
+  /* Roomier tap targets */
   .chat-item-wrapper,
   .pdf-item-wrapper {
     padding: 10px;
   }
+
+  .settings-btn {
+    padding: 10px;
+  }
 }
 
-/* Touch screens have no hover, so keep the delete buttons reachable. */
-@media (hover: none) {
-  .delete-item-btn {
-    opacity: 0.6;
+/* Phones */
+@media (max-width: 480px) {
+  .sidebar {
+    width: min(88vw, 300px);
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .sidebar-logo {
+    gap: 8px;
+    padding-left: 2px;
+  }
+
+  .sidebar-logo-img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .profile-card {
+    padding: 8px;
+  }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .new-chat-btn {
+    padding: 9px 10px;
+  }
+
+  .sidebar-scrollable {
+    gap: 12px;
+  }
+
+  .chat-item-wrapper,
+  .pdf-item-wrapper {
+    padding: 9px 8px;
+  }
+
+  .sidebar-footer {
+    padding-top: 10px;
+  }
+}
+
+/* ==========================================
+   RESPONSIVE SIDEBAR
+   ========================================== */
+
+@media (max-width: 768px) {
+  .sidebar {
+    font-size: 13px;
+  }
+
+  .new-chat-btn {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+
+  .section-title h4 {
+    font-size: 12px;
+    letter-spacing: 0.3px;
+  }
+
+  .sidebar-quiz-card {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .sidebar-quiz-card h3 {
+    font-size: 14px;
+  }
+
+  .sidebar-quiz-card p {
+    font-size: 12px;
+  }
+
+  .sidebar-section {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    font-size: 12px;
+  }
+
+  .new-chat-btn {
+    font-size: 12px;
+    padding: 9px 10px;
+  }
+
+  .section-title h4 {
+    font-size: 11px;
+  }
+
+  .sidebar-quiz-card {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .sidebar-quiz-card h3 {
+    font-size: 13px;
+  }
+
+  .sidebar-quiz-card p {
+    font-size: 11px;
   }
 }

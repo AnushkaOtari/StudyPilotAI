@@ -1,9 +1,13 @@
 .auth-page {
-  min-height: 100vh;
-  width: 100vw;
+  /* 100% instead of 100vw: 100vw includes the scrollbar and causes sideways scroll. */
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  /* The shell (#root/body) never scrolls, so the page itself must: a tall card
+     on a short or small screen scrolls instead of being clipped. */
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 28px;
   background-color: var(--bg-main);
 }
@@ -11,6 +15,11 @@
 .auth-card {
   width: 100%;
   max-width: 440px;
+  min-width: 0;
+  /* auto margins centre the card, and fall back to top-aligned (never clipped)
+     when it is taller than the screen. */
+  margin: auto;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -25,7 +34,7 @@
   color: var(--text-muted);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--font-form-label);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   margin-bottom: 4px;
@@ -33,7 +42,7 @@
 
 .auth-heading h1 {
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: var(--font-h1);
   font-weight: 700;
   color: var(--text-main);
   margin-bottom: 6px;
@@ -43,7 +52,7 @@
 
 .auth-heading span {
   color: var(--text-muted);
-  font-size: 14.5px;
+  font-size: var(--font-body);
 }
 
 .auth-field {
@@ -53,7 +62,7 @@
   color: var(--text-main);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--font-form-label);
 }
 
 .auth-field input,
@@ -65,7 +74,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 0 15px;
-  font-size: 14.5px;
+  font-size: var(--font-input);
   font-weight: 400;
   font-family: var(--font-sans);
   outline: none;
@@ -120,7 +129,7 @@
   background: var(--accent);
   color: var(--text-main);
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: var(--font-h5);
   font-weight: 700;
   cursor: pointer;
   margin-top: 4px;
@@ -144,13 +153,14 @@
   border: 1px solid rgba(220, 38, 38, 0.25);
   padding: 12px 14px;
   border-radius: var(--radius-sm);
-  font-size: 13.5px;
+  font-size: var(--font-sm);
+  overflow-wrap: anywhere;
 }
 
 .auth-switch {
   color: var(--text-muted);
   text-align: center;
-  font-size: 13.5px;
+  font-size: var(--font-sm);
 }
 
 .auth-switch a {
@@ -179,8 +189,52 @@
   animation: authFade 0.35s ease both;
 }
 
-@media (max-width: 480px) {
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 768px) {
+  .auth-page {
+    padding: 20px 16px;
+  }
+
   .auth-card {
-    padding: 26px;
+    padding: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 12px;
+  }
+
+  .auth-card {
+    padding: 22px 18px;
+    gap: 14px;
+  }
+
+  .auth-field input,
+  .password-field input {
+    height: 46px;
+  }
+
+  .auth-submit {
+    height: 48px;
+  }
+}
+
+/* Short screens (landscape phones, small laptops): tighter card */
+@media (max-height: 700px) {
+  .auth-card {
+    padding-top: 24px;
+    padding-bottom: 24px;
+    gap: 12px;
+  }
+
+  .auth-field input,
+  .password-field input {
+    height: 44px;
+  }
+
+  .auth-submit {
+    height: 46px;
   }
 }

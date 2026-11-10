@@ -47,6 +47,33 @@
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* ================= RESPONSIVE TYPE SCALE =================
+     Desktop (>= 1101px) keeps the original sizes. The scale steps down at
+     the breakpoints at the bottom of this file (<=1100, <=768, <=480).
+     Use these tokens instead of hard-coded px values in component CSS. */
+
+  --font-caption: 12px;       /* hints, badges, citation labels (never below 12) */
+  --font-xs: 13px;            /* secondary metadata */
+  --font-sm: 14px;            /* compact UI text */
+  --font-body: 14.5px;        /* chat messages, descriptions */
+  --font-md: 15px;            /* emphasised body, option text */
+  --font-base: 16px;          /* document base */
+  --font-lg: 18px;
+
+  /* Headings */
+  --font-h1: 32px;            /* page titles (auth) */
+  --font-h2: 28px;            /* quiz titles, big stats */
+  --font-h3: 24px;            /* sidebar brand, empty state, modal title */
+  --font-h4: 20px;            /* card titles */
+  --font-h5: 18px;            /* sub titles, primary buttons */
+  --font-question: 22px;      /* quiz question */
+  --font-brand: 22px;         /* header brand */
+
+  /* Controls */
+  --font-button: 16px;
+  --font-input: 15px;
+  --font-label: 14px;         /* uppercase section labels */
+  --font-form-label: 16px;    /* labels above form fields */
 }
 
 * {
@@ -55,19 +82,57 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Stops mobile browsers from silently inflating text in some layouts. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+img {
+  max-width: 100%;
+}
+
+
 body {
   background-color: var(--bg-main);
   color: var(--text-main);
   font-family: var(--font-sans);
+
+  font-size: var(--font-base);
+  line-height: 1.6;
+
   overflow: hidden;
+
   height: 100vh;
-  width: 100vw;
+  height: 100dvh;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 h1, h2, h3, h4, .font-display {
   font-family: var(--font-display);
   color: var(--text-main);
   letter-spacing: 0.2px;
+  overflow-wrap: break-word;
+}
+
+/* ================= RESPONSIVE HEADINGS ================= */
+
+h1 {
+  font-size: var(--font-h1);
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: var(--font-h2);
+  line-height: 1.3;
+}
+
+h3 {
+  font-size: var(--font-h3);
+  line-height: 1.35;
 }
 
 #root {
@@ -78,8 +143,23 @@ h1, h2, h3, h4, .font-display {
   overflow: hidden;
 }
 
-button, input, textarea, select {
+button,
+input,
+textarea,
+select {
   font-family: var(--font-sans);
+  min-width: 0;
+  max-width: 100%;
+}
+
+button {
+  font-size: var(--font-button);
+}
+
+input,
+textarea,
+select {
+  font-size: var(--font-input);
 }
 
 /* Accessible focus ring */
@@ -151,5 +231,199 @@ select:focus-visible,
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* ================= RESPONSIVE TYPE STEPS =================
+   Desktop      > 1200px    : base values defined in :root above
+   Laptop       1025-1200px : ~6% smaller
+   Tablet       769-1024px  : ~12% smaller
+   Mobile       481-768px   : ~15% smaller (sidebar becomes a drawer)
+   Small mobile <= 480px    : ~20% smaller
+   Floor is 12px for captions and 13px for other text. */
+
+/* Laptop */
+@media (max-width: 1200px) {
+  :root {
+    --font-xs: 12.5px;
+    --font-sm: 13.5px;
+    --font-body: 14px;
+    --font-md: 14.5px;
+    --font-base: 15px;
+    --font-lg: 17px;
+
+    --font-h1: 29px;
+    --font-h2: 25px;
+    --font-h3: 21px;
+    --font-h4: 18px;
+    --font-h5: 16.5px;
+    --font-question: 20px;
+    --font-brand: 20px;
+
+    --font-button: 15px;
+    --font-label: 13.5px;
+    --font-form-label: 15px;
+  }
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  :root {
+    --font-h1: 27px;
+    --font-h2: 23px;
+    --font-h3: 19px;
+    --font-h4: 17px;
+    --font-h5: 15.5px;
+    --font-question: 18.5px;
+    --font-brand: 19px;
+
+    --font-base: 15px;
+    --font-lg: 16px;
+    --font-button: 14.5px;
+    --font-label: 13px;
+    --font-form-label: 14.5px;
+  }
+}
+
+/* Mobile: the sidebar is a drawer from here down */
+@media (max-width: 768px) {
+  :root {
+    --font-h1: 25px;
+    --font-h2: 21px;
+    --font-h3: 18px;
+    --font-h4: 16px;
+    --font-h5: 15px;
+    --font-question: 17.5px;
+    --font-brand: 18px;
+
+    --font-label: 12.5px;
+    --font-form-label: 14.5px;
+    /* 16px keeps iOS Safari from zooming the page when a field gets focus. */
+    --font-input: 16px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  :root {
+    --font-xs: 12px;
+    --font-sm: 13px;
+    --font-body: 13.5px;
+    --font-md: 14px;
+
+    --font-h1: 22px;
+    --font-h2: 19px;
+    --font-h3: 17px;
+    --font-h4: 15.5px;
+    --font-h5: 14.5px;
+    --font-question: 16px;
+    --font-brand: 17px;
+
+    --font-button: 14px;
+  }
+}
+/* ==========================================
+   RESPONSIVE TYPOGRAPHY
+   ========================================== */
+
+/* Desktop: preserve the current appearance */
+:root {
+  --font-xs: 12px;
+  --font-sm: 13px;
+  --font-base: 15px;
+  --font-lg: 18px;
+
+  --font-h1: 32px;
+  --font-h2: 26px;
+  --font-h3: 22px;
+
+  --font-button: 14px;
+  --font-input: 15px;
+  --font-label: 13px;
+}
+
+/* Laptop */
+@media (max-width: 1200px) {
+  :root {
+    --font-xs: 12px;
+    --font-sm: 12px;
+    --font-base: 14px;
+    --font-lg: 16px;
+
+    --font-h1: 28px;
+    --font-h2: 23px;
+    --font-h3: 20px;
+
+    --font-button: 13px;
+    --font-input: 14px;
+    --font-label: 12px;
+  }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  :root {
+    --font-xs: 12px;
+    --font-sm: 12px;
+    --font-base: 13px;
+    --font-lg: 15px;
+
+    --font-h1: 25px;
+    --font-h2: 21px;
+    --font-h3: 18px;
+
+    --font-button: 13px;
+    --font-input: 16px;
+    --font-label: 12px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  :root {
+    --font-xs: 12px;
+    --font-sm: 12px;
+    --font-base: 12px;
+    --font-lg: 14px;
+
+    --font-h1: 22px;
+    --font-h2: 19px;
+    --font-h3: 17px;
+
+    --font-button: 12px;
+    --font-input: 16px;
+    --font-label: 12px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 360px) {
+  :root {
+    --font-xs: 12px;
+    --font-sm: 12px;
+    --font-base: 12px;
+    --font-lg: 13px;
+
+    --font-h1: 20px;
+    --font-h2: 18px;
+    --font-h3: 16px;
+
+    --font-button: 12px;
+    --font-input: 16px;
+    --font-label: 12px;
+  }
+}
+
+/* Responsive sidebar typography */
+
+@media (max-width: 768px) {
+  :root {
+    --font-label: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --font-label: 11px;
   }
 }

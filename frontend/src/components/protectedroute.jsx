@@ -10,7 +10,7 @@ export const ProtectedRoute = ({ children }) => {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        height: "100vh",
+        height: "100dvh",
         background: "#FFFDF5",
         color: "#111111",
         fontFamily: "'Lancelot', serif"

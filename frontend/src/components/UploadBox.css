@@ -21,6 +21,10 @@
   gap: 16px;
 }
 
+.upload-box-copy {
+  min-width: 0;
+}
+
 .upload-icon-wrap {
   width: 46px;
   height: 46px;
@@ -41,7 +45,7 @@
 
 .upload-box-copy h2 {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--font-h4);
   font-weight: 700;
   color: var(--text-main);
   margin-bottom: 2px;
@@ -49,7 +53,7 @@
 
 .upload-box-copy p {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--font-xs);
   line-height: 1.4;
 }
 
@@ -91,7 +95,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--font-button);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
@@ -114,7 +118,7 @@
   border: 1px solid #F2D873;
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--font-button);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.15s ease;
@@ -135,7 +139,7 @@
   width: 100%;
   text-align: center;
   color: var(--text-faint);
-  font-size: 11.5px;
+  font-size: var(--font-caption);
 }
 
 /* Multi-file selection display */
@@ -151,7 +155,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12.5px;
+  gap: 10px;
+  font-size: var(--font-caption);
   font-weight: 700;
   color: var(--text-main);
   margin-bottom: 8px;
@@ -161,9 +166,10 @@
   background: none;
   border: none;
   color: #d9534f;
-  font-size: 12px;
+  font-size: var(--font-caption);
   cursor: pointer;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .clear-all-btn:hover {
@@ -187,11 +193,14 @@
   padding: 5px 10px;
   border-radius: var(--radius-sm);
   color: var(--text-main);
-  font-size: 12.5px;
+  font-size: var(--font-caption);
   font-weight: 600;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .file-chip-name {
+  min-width: 0;
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -208,6 +217,7 @@
   justify-content: center;
   padding: 2px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .remove-chip-btn:hover {
@@ -223,12 +233,13 @@
   padding: 10px 12px;
   background: var(--bg-surface);
   max-height: 230px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 .queue-status-title {
-  font-size: 12.5px;
+  font-size: var(--font-caption);
   font-weight: 700;
   color: var(--text-main);
   margin-bottom: 8px;
@@ -241,7 +252,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 170px;
+  max-height: min(170px, 28dvh);
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -250,22 +261,30 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  font-size: 13px;
+  font-size: var(--font-xs);
 }
 
 .job-file-info {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 0;
   color: var(--text-main);
   font-weight: 600;
 }
 
+.job-file-info svg {
+  flex-shrink: 0;
+}
+
 .job-filename {
+  min-width: 0;
   max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -278,8 +297,10 @@
   gap: 5px;
   padding: 4px 10px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: var(--font-caption);
   font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .status-completed {
@@ -312,7 +333,7 @@
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--font-xs);
   color: var(--text-main);
 }
 
@@ -325,18 +346,43 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 640px) {
+/* ---------------- Responsive ---------------- */
+
+/* Short screens: a compact card so the chat keeps its room */
+@media (max-height: 720px) {
+  .upload-box {
+    padding: 14px 20px;
+  }
+
+  .upload-icon-wrap {
+    width: 38px;
+    height: 38px;
+  }
+
   .upload-box-top {
-    flex-direction: column;
-    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .upload-dropzone {
+    margin-top: 10px;
+    padding: 10px 12px;
+    gap: 8px 14px;
+  }
+
+  .file-picker,
+  .upload-btn {
+    height: 38px;
+  }
+
+  .selected-files-container,
+  .queue-status-container {
+    margin-top: 10px;
   }
 }
 
-/* ---------------- Responsive ---------------- */
-
 @media (max-width: 768px) {
   .upload-box {
-    padding: 18px 16px;
+    padding: 16px;
   }
 
   .upload-dropzone {
@@ -345,20 +391,91 @@
 }
 
 @media (max-width: 640px) {
+  /* Icon stays beside the title (saves ~50px of height versus stacking it). */
+  .upload-box-top {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .upload-icon-wrap {
+    width: 40px;
+    height: 40px;
+  }
+
+  .upload-dropzone {
+    margin-top: 12px;
+  }
+
   .file-chip-name {
     max-width: 120px;
   }
 
   .job-filename {
-    max-width: 160px;
+    max-width: none;
   }
 
+  /* Both buttons share one row; long labels (e.g. "Processing Queue...") wrap
+     inside the button instead of overflowing it. */
   .button-group {
     width: 100%;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
 
   .file-picker,
   .upload-btn {
-    flex: 1 1 auto;
+    flex: 1 1 0;
+    min-width: 0;
+    height: auto;
+    min-height: 40px;
+    padding: 6px 10px;
+    line-height: 1.2;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-box {
+    padding: 14px 12px;
+  }
+
+  .queue-job-item {
+    padding: 7px 10px;
+  }
+
+  .job-status-tag {
+    padding: 3px 8px;
+  }
+}
+
+/* Landscape phones (very little height): a one-glance upload card */
+@media (max-height: 500px) {
+  .upload-box {
+    padding: 8px 14px;
+  }
+
+  .upload-box-copy p,
+  .upload-hint {
+    display: none;
+  }
+
+  .upload-icon-wrap {
+    width: 34px;
+    height: 34px;
+  }
+
+  .upload-box-copy h2 {
+    margin-bottom: 0;
+  }
+
+  .upload-dropzone {
+    margin-top: 8px;
+    padding: 8px;
+  }
+
+  .file-picker,
+  .upload-btn {
+    height: 36px;
+    min-height: 36px;
   }
 }

@@ -4,6 +4,10 @@
   gap: 12px;
   width: 100%;
   flex-shrink: 0;
+  /* Stays reachable if the chat column ever has to scroll (very short screens). */
+  position: sticky;
+  bottom: 8px;
+  z-index: 2;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -19,12 +23,13 @@
 
 .chat-input-textarea {
   flex: 1;
+  min-width: 0;
   background: transparent;
   color: var(--text-main);
   border: none;
   resize: none;
   outline: none;
-  font-size: 15px;
+  font-size: var(--font-input);
   line-height: 1.5;
   padding: 10px 0;
   min-height: 24px;
@@ -68,21 +73,31 @@
 
 /* ---------------- Responsive ---------------- */
 
+/* Keep the long placeholder on one line instead of clipping its second line. */
+.chat-input-textarea::placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 640px) {
   .chat-input-container {
     gap: 8px;
     padding: 6px 8px 6px 14px;
   }
 
-  /* 16px stops iOS Safari from zooming the page when the field is focused. */
   .chat-input-textarea {
-    font-size: 15px;
+    max-height: 120px;
+  }
+}
+
+@media (max-width: 360px) {
+  .chat-input-container {
+    padding-left: 12px;
   }
 
-  /* Keep the long placeholder on one line instead of clipping its second line. */
-  .chat-input-textarea::placeholder {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .send-btn {
+    width: 40px;
+    height: 40px;
   }
 }

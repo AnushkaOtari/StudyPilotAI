@@ -313,7 +313,7 @@ function QuizPage() {
           <div className="loading-container">
             <div className="spinner"></div>
             <h2 className="quiz-title">Generating your personalized quiz...</h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
+            <p style={{ color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>
               Analyzing study materials and crafting custom questions based strictly on your PDF context...
             </p>
           </div>
@@ -443,7 +443,7 @@ function QuizPage() {
         <div className="quiz-card animate-slide-up">
           <div className="quiz-header">
             <h1 className="quiz-title">StudyPilot Quiz</h1>
-            <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-muted)" }}>
+            <span style={{ fontSize: "var(--font-sm)", fontWeight: "600", color: "var(--text-muted)" }}>
               Question {currentIndex + 1} of {questions.length}
             </span>
           </div>
@@ -577,7 +577,7 @@ function QuizPage() {
             {feedbackLoading ? (
               <div style={{ display: "flex", gap: "8px", alignItems: "center", padding: "10px 0" }}>
                 <Loader className="animate-spin" size={16} />
-                <span style={{ fontSize: "14px", color: "var(--text-muted)" }}>Generating custom assessment feedback...</span>
+                <span style={{ fontSize: "var(--font-sm)", color: "var(--text-muted)" }}>Generating custom assessment feedback...</span>
               </div>
             ) : (
               <p className="feedback-text">{feedback}</p>
@@ -599,14 +599,14 @@ function QuizPage() {
                     <span className="badge badge-secondary" style={{ textTransform: "none" }}>
                       {q.type === "mcq" ? "MCQ" : q.type === "true_false" ? "True/False" : "Fill the Blank"}
                     </span>
-                    <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "4px", fontSize: "13px", fontWeight: "600", color: correct ? "#10B981" : "var(--danger)" }}>
+                    <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "4px", fontSize: "var(--font-xs)", fontWeight: "600", color: correct ? "#10B981" : "var(--danger)" }}>
                       {correct ? <CheckCircle size={15} /> : <XCircle size={15} />}
                       {correct ? "Correct" : "Incorrect"}
                     </span>
                   </div>
 
                   <div className="review-label">Question {idx + 1}</div>
-                  <div className="review-value" style={{ fontWeight: "600", fontSize: "15px" }}>{q.question}</div>
+                  <div className="review-value" style={{ fontWeight: "600", fontSize: "var(--font-md)" }}>{q.question}</div>
 
                   <div className="review-label">Your Answer</div>
                   <div className={`review-value ${correct ? "correct-val" : "incorrect-val"}`}>

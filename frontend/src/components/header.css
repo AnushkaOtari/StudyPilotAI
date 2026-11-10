@@ -4,6 +4,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 0 28px;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
@@ -16,23 +17,30 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .brand-logo {
   width: 32px;
   height: 32px;
+  flex-shrink: 0;
   object-fit: contain;
   border-radius: 6px;
+}
+
+.brand-text {
+  min-width: 0;
 }
 
 .brand-text h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: var(--font-brand);
   font-weight: 700;
   color: var(--text-main);
   letter-spacing: 0.1px;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .brand-text h1 span {
@@ -50,11 +58,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   background: var(--accent-light);
   border: 1px solid var(--accent);
   padding: 6px 14px;
   border-radius: 9999px;
-  font-size: 13px;
+  font-size: var(--font-xs);
   max-width: 300px;
   color: var(--text-main);
   transition: background 0.2s ease, border-color 0.2s ease;
@@ -84,16 +93,7 @@
   max-width: 170px;
 }
 
-@media (max-width: 640px) {
-  .scope-label {
-    display: none;
-  }
-  .scope-value {
-    max-width: 110px;
-  }
-}
-
-/* ---------------- Responsive ---------------- */
+/* ---------------- Mobile menu button ---------------- */
 
 .menu-btn {
   display: none;
@@ -115,7 +115,9 @@
   border-color: var(--accent);
 }
 
-@media (max-width: 1024px) {
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 1200px) {
   .header {
     padding: 0 20px;
   }
@@ -124,33 +126,59 @@
 @media (max-width: 768px) {
   .header {
     height: 56px;
-    gap: 10px;
     padding: 0 12px;
+    gap: 10px;
   }
 
   .menu-btn {
     display: flex;
   }
 
+  /* The brand yields space first, the badge truncates its own text. */
   .brand {
-    min-width: 0;
+    flex: 0 1 auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .scope-label {
+    display: none;
   }
 
-  .scope-badge {
-    min-width: 0;
+  .scope-value {
+    max-width: 110px;
   }
 }
 
 @media (max-width: 480px) {
-  .brand-text h1 {
-    font-size: 18px;
-  }
-
   .scope-badge {
     padding: 5px 10px;
   }
 
   .scope-value {
     max-width: 80px;
+  }
+}
+
+/* Very small phones: the logo mark is enough, the badge keeps its room */
+@media (max-width: 360px) {
+  .header {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .brand-text {
+    display: none;
+  }
+
+  .scope-value {
+    max-width: 100px;
+  }
+}
+
+/* Landscape phones */
+@media (max-height: 500px) {
+  .header {
+    height: 48px;
   }
 }

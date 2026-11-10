@@ -17,6 +17,7 @@
   display: flex;
   flex-direction: column;
   width: min(960px, 100%);
+  max-width: 100%;
   height: min(92vh, 100%);
   height: min(92dvh, 100%);
   background: var(--bg-surface);
@@ -44,7 +45,7 @@
   flex: 1;
   min-width: 0;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--font-base);
   font-weight: 700;
 }
 
@@ -64,7 +65,8 @@
 .pdf-viewer-page-label {
   min-width: 96px;
   text-align: center;
-  font-size: 13px;
+  white-space: nowrap;
+  font-size: var(--font-xs);
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -96,7 +98,7 @@
 
 .pdf-viewer-notice {
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--font-xs);
   color: var(--text-main);
   background: var(--accent-light);
   border-bottom: 1px solid var(--accent);
@@ -131,7 +133,7 @@
   margin: auto;
   padding: 24px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: var(--text-muted);
 }
 
@@ -174,7 +176,52 @@
     justify-content: center;
   }
 
+  .pdf-viewer-btn {
+    width: 38px;
+    height: 38px;
+  }
+
   .pdf-viewer-body {
     padding: 8px;
+  }
+}
+
+/* Landscape phones / very short screens: use the whole screen, one compact
+   header row (title, pager, close) so the page itself gets the room. */
+@media (max-height: 500px) {
+  .pdf-viewer-overlay {
+    padding: 0;
+  }
+
+  .pdf-viewer {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+  }
+
+  .pdf-viewer-header {
+    flex-wrap: nowrap;
+    padding: 6px 12px;
+  }
+
+  .pdf-viewer-title {
+    flex: 1;
+    flex-basis: auto;
+    order: 0;
+  }
+
+  .pdf-viewer-pager {
+    flex-basis: auto;
+    order: 0;
+  }
+
+  .pdf-viewer-close {
+    order: 0;
+  }
+
+  .pdf-viewer-btn {
+    width: 34px;
+    height: 34px;
   }
 }
