@@ -21,9 +21,9 @@ class UserResponse(BaseModel):
     email: EmailStr
     created_at: datetime
 
-    class Config:
-        orm_mode = True
-        from_attributes = True
+model_config = {
+    "from_attributes": True
+}
 
 
 class Token(BaseModel):

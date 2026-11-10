@@ -2,6 +2,7 @@ import os
 import re
 from urllib.parse import quote
 from routes.quiz import router as quiz_router
+from routes.flashcard import router as flashcard_router
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +18,7 @@ app = FastAPI()
 
 app.include_router(auth_router)
 app.include_router(quiz_router)
+app.include_router(flashcard_router)
 
 
 app.add_middleware(

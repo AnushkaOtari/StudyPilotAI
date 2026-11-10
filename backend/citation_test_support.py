@@ -144,7 +144,7 @@ def build_env(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(backend_dir)
 
     for name in ("app", "rag.rag_pipeline", "rag.document_queue", "rag.resource_hash_table",
-                 "auth", "auth.models", "auth.router", "routes", "routes.quiz", "models"):
+                 "auth", "auth.models", "auth.router", "routes", "routes.quiz", "routes.flashcard", "models"):
         monkeypatch.delitem(sys.modules, name, raising=False)
 
     class User:
@@ -172,6 +172,10 @@ def build_env(tmp_path, monkeypatch):
     }.items():
         m = types.ModuleType(name)
         m.__dict__.update(attrs)
+        if name == "routes":
+            # Lets real route files (e.g. routes/flashcard.py) still be imported
+            # while routes.quiz stays a stand-in.
+            m.__path__ = [os.path.join(backend_dir, "routes")]
         monkeypatch.setitem(sys.modules, name, m)
 
     GEMINI.reset()

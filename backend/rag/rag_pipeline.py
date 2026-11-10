@@ -1,9 +1,8 @@
 import os
 import re
 import time
-
-from rag.pdf_reader import extract_text, extract_text_by_page
 from rag.chunker import chunk_text
+from rag.pdf_reader import extract_text, extract_text_by_page
 from rag.embedder import get_embedding
 from rag.vector_store import VectorStore
 from rag.qa import answer_question_with_sources
@@ -61,7 +60,6 @@ def _get_store(user_id, chat_id):
 
 
 def load_pdf(pdf_path, user_id, chat_id):
-
     print(f"Loading PDF into user {user_id}, chat {chat_id}: {pdf_path}")
 
     pages = extract_text_by_page(pdf_path)
@@ -169,6 +167,41 @@ def retrieve_context(query, user_id, chat_id, filename=None, k=8):
 
     return context, results
 
+def resolve_followup_question(question, chat_history):
+    question_lower = question.lower().strip()
+
+    followup_phrases = [
+        "explain with example",
+        "give example",
+        "with example",
+        "explain it",
+        "explain this",
+        "tell me more",
+        "more detail",
+        "simplify it",
+        "simpler",
+        "how so",
+        "why",
+    ]
+
+    is_followup = (
+        len(question.split()) <= 6
+        or any(phrase in question_lower for phrase in followup_phrases)
+    )
+
+    if is_followup and chat_history:
+        previous_question = chat_history[-1].get("question", "")
+        previous_answer = chat_history[-1].get("answer", "")
+
+        if previous_question:
+            return (
+                f"Previous question: {previous_question}\n"
+                f"Previous answer: {previous_answer}\n"
+                f"Current follow-up: {question}"
+            )
+
+    return question
+
 
 def ask_rag(question, user_id, chat_id, filename=None):
 
@@ -185,6 +218,10 @@ def ask_rag(question, user_id, chat_id, filename=None):
     chat_history = _chat_histories.setdefault(key, [])
 
     total_start = time.time()
+    retrieval_question = resolve_followup_question(
+    question, chat_history
+    )
+
 
     start = time.time()
     context, results = retrieve_context(

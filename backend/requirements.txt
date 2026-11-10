@@ -13,3 +13,4 @@ numpy
 sentence-transformers
 langchain-text-splitters
 pymupdf
+python-multipart==0.0.32
