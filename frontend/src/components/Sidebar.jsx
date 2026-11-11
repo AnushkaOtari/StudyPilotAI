@@ -1,7 +1,7 @@
 import "./Sidebar.css";
 import SettingsModal from "./SettingsModal";
 import logo from "../assets/logo.png";
-import { BrainCircuit, ChevronRight } from "lucide-react";
+import { BrainCircuit, ChevronRight, SquareStack } from "lucide-react";
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
@@ -140,6 +140,24 @@ function Sidebar({
             <span className="quiz-title">AI Quiz</span>
             <span className="quiz-subtitle">
               Test your understanding
+            </span>
+          </div>
+          <ChevronRight size={18} className="quiz-arrow" />
+        </NavLink>
+
+        <NavLink
+          to="/flashcards"
+          state={{ chatId: currentChatId }}
+          className="sidebar-quiz-card"
+        >
+          <div className="quiz-icon-box">
+            <SquareStack size={22} />
+          </div>
+
+          <div className="quiz-text">
+            <span className="quiz-title">Flashcards</span>
+            <span className="quiz-subtitle">
+              Revise key concepts
             </span>
           </div>
           <ChevronRight size={18} className="quiz-arrow" />

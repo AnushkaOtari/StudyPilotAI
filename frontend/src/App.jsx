@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import QuizPage from "./pages/QuizPage";
+import FlashcardsPage from "./pages/FlashcardsPage";
 import Login from "./pages/login.jsx";
 import Register from "./pages/register.jsx";
 import StudyPilot from "./pages/StudyPilot.jsx";
@@ -85,6 +86,15 @@ function App() {
         element={
           <ProtectedRoute>
             <QuizPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/flashcards"
+        element={
+          <ProtectedRoute>
+            <FlashcardsPage />
           </ProtectedRoute>
         }
       />

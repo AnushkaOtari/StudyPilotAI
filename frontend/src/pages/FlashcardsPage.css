@@ -1,0 +1,475 @@
+/* Flashcards page. Uses the shared design tokens from index.css and the same
+   page/card structure as the Quiz page. All classes are fc- prefixed. */
+
+.fc-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  /* The shell (#root/body) never scrolls, so this container is the scroller. */
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  padding: 36px 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.fc-shell {
+  max-width: 760px;
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 0; /* keep natural height so .fc-page scrolls */
+  margin: 0 auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-md);
+  animation: slideUp 0.3s ease both;
+}
+
+/* ---------------- Header ---------------- */
+
+.fc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 16px;
+}
+
+.fc-header-text {
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.fc-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: var(--font-h2);
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.fc-subtitle {
+  margin: 6px 0 0;
+  font-size: var(--font-body);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.fc-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: var(--font-base);
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 6px 0;
+  transition: color 0.2s;
+}
+
+.fc-back-link:hover {
+  color: var(--text-main);
+}
+
+/* ---------------- Form ---------------- */
+
+.fc-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.fc-field {
+  margin-bottom: 18px;
+}
+
+.fc-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--font-form-label);
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.fc-select {
+  width: 100%;
+  min-width: 0;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-input);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fc-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.fc-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fc-help {
+  margin: 6px 0 0;
+  font-size: var(--font-caption);
+  color: var(--text-faint);
+}
+
+/* ---------------- Buttons ---------------- */
+
+.fc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 11px 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  font-family: var(--font-display);
+  font-size: var(--font-button);
+  font-weight: 700;
+  color: var(--text-main);
+  background: var(--bg-card);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.fc-btn:focus-visible,
+.fc-card:focus-visible,
+.fc-link-btn:focus-visible,
+.fc-back-link:focus-visible {
+  outline: 3px solid var(--text-main);
+  outline-offset: 2px;
+}
+
+.fc-btn-primary {
+  background: var(--accent);
+  border-color: #F2D873;
+}
+
+.fc-btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.fc-btn-secondary:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--border-color-hover);
+}
+
+.fc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fc-btn-block {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.fc-btn-link {
+  width: 100%;
+}
+
+.fc-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  margin-top: 18px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.fc-link-btn:hover {
+  color: var(--text-main);
+}
+
+/* ---------------- Banners / loading ---------------- */
+
+.fc-banner {
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 18px;
+  font-size: var(--font-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.fc-banner-error {
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  color: var(--danger);
+}
+
+.fc-banner-info {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--text-main);
+}
+
+.fc-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 36px 8px;
+}
+
+.fc-loading-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-h4);
+  font-weight: 700;
+}
+
+.fc-loading-text {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.fc-inline-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 36px 0;
+  color: var(--text-muted);
+}
+
+.fc-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+.fc-spinner-sm {
+  width: 20px;
+  height: 20px;
+}
+
+/* ---------------- Study view ---------------- */
+
+.fc-study {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fc-progress {
+  margin-bottom: 18px;
+}
+
+.fc-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.fc-progress-count {
+  font-size: var(--font-md);
+}
+
+.fc-progress-percent {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.fc-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border-color-light);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.fc-progress-fill {
+  height: 100%;
+  background: var(--accent-hover);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.fc-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+  min-height: 280px;
+  padding: 28px;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text-main);
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.fc-card:hover {
+  border-color: var(--border-color-hover);
+}
+
+.fc-card.is-answer {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.fc-card-face {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  animation: fadeIn 0.2s ease both;
+}
+
+.fc-card-label {
+  font-size: var(--font-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.fc-card-text {
+  font-family: var(--font-display);
+  font-size: var(--font-question);
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere; /* long words / URLs never overflow */
+}
+
+.fc-card.is-answer .fc-card-text {
+  font-weight: 500;
+  font-size: var(--font-lg);
+  line-height: 1.55;
+}
+
+.fc-card-hint {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.fc-last-note {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.fc-nav {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.fc-nav .fc-btn {
+  flex: 1;
+}
+
+.fc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 768px) {
+  .fc-page {
+    padding: 24px 16px;
+  }
+
+  .fc-shell {
+    padding: 24px 20px;
+  }
+
+  .fc-card {
+    min-height: 240px;
+    padding: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fc-page {
+    padding: 16px 12px;
+  }
+
+  .fc-shell {
+    padding: 20px 16px;
+  }
+
+  .fc-title {
+    font-size: var(--font-h3);
+  }
+
+  .fc-card {
+    min-height: 220px;
+    padding: 18px;
+  }
+
+  .fc-btn {
+    padding: 11px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-shell,
+  .fc-card-face,
+  .fc-progress-fill,
+  .fc-spinner {
+    animation: none;
+    transition: none;
+  }
+}
