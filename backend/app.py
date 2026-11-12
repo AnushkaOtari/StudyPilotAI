@@ -20,6 +20,7 @@ from models import QuestionRequest
 
 from routes.quiz import router as quiz_router
 from routes.flashcard import router as flashcard_router
+from routes.knowledge_graph import router as knowledge_graph_router
 
 from rag.rag_pipeline import (
     ask_rag,
@@ -35,6 +36,12 @@ from rag.document_queue import (
 )
 
 from rag.resource_hash_table import global_resource_hash_table
+
+from services.knowledge_graph_worker import (
+    delete_chat_graphs,
+    delete_document_graph,
+    recover_interrupted_jobs
+)
 
 from auth.models import User
 from auth.router import (
@@ -52,6 +59,7 @@ app = FastAPI()
 app.include_router(auth_router)
 app.include_router(quiz_router)
 app.include_router(flashcard_router)
+app.include_router(knowledge_graph_router)
 
 
 # -----------------------------
@@ -201,6 +209,24 @@ def resolve_user_pdf_path(
 
 
 # -----------------------------
+# Knowledge Graph cleanup helpers
+# -----------------------------
+# Graph data is separate from the RAG data. Cleanup problems are logged and
+# never turn a successful PDF/chat deletion into an error.
+
+def _delete_graph_for_pdf(user_id: int, chat_id: str, filename: str):
+
+    try:
+        delete_document_graph(user_id, chat_id, filename)
+
+    except Exception as e:
+
+        print(
+            f"Knowledge graph cleanup failed for {filename}: {e}"
+        )
+
+
+# -----------------------------
 # Home Route
 # -----------------------------
 
@@ -223,6 +249,14 @@ def startup_event():
         "StudyPilot backend started. "
         "Per-chat vector stores load lazily on first use."
     )
+
+    # Re-queue knowledge graph jobs interrupted by a previous shutdown.
+    # Independent of RAG; never raises.
+    try:
+        recovered = recover_interrupted_jobs()
+        print(f"Knowledge graph recovery: {recovered}")
+    except Exception as e:
+        print(f"Knowledge graph recovery skipped: {e}")
 
 
 # -----------------------------
@@ -487,6 +521,12 @@ def delete_file(
             upload_folder
         )
 
+        _delete_graph_for_pdf(
+            current_user.id,
+            chat_id,
+            filename
+        )
+
         return {
             "message": f"{filename} deleted successfully."
         }
@@ -496,6 +536,15 @@ def delete_file(
         print(
             f"Error deleting PDF {filename}: {e}"
         )
+
+        # The PDF may already be gone even though the RAG rebuild failed;
+        # never leave its graph behind.
+        if not os.path.isfile(file_path):
+            _delete_graph_for_pdf(
+                current_user.id,
+                chat_id,
+                filename
+            )
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -556,6 +605,25 @@ def delete_chat(
             user_id,
             chat_id
         )
+
+        # Knowledge graph data is independent of RAG: stop its jobs and
+        # delete it now. The chat is marked deleted inside, so a running
+        # graph job cannot recreate anything afterwards.
+
+        try:
+
+            delete_chat_graphs(
+                user_id,
+                chat_id,
+                permanent=True
+            )
+
+        except Exception as graph_error:
+
+            print(
+                f"Knowledge graph cleanup failed for chat "
+                f"{chat_id}: {graph_error}"
+            )
 
         # Step 2:
         # Cancel waiting jobs and wait for active queue

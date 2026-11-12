@@ -10,6 +10,32 @@ from rag.rag_pipeline import load_pdf
 logger = logging.getLogger(__name__)
 
 
+def _trigger_graph_generation(job) -> None:
+    """
+    Ask the independent Knowledge Graph worker to process a PDF whose
+    indexing just completed.
+
+    This only hands the job over; it never raises, so a graph problem
+    can never fail or delay PDF indexing.
+    """
+    try:
+        from services.knowledge_graph_worker import (
+            trigger_for_completed_job
+        )
+
+        trigger_for_completed_job(
+            job.user_id,
+            job.chat_id,
+            job.filename,
+            job.file_path
+        )
+
+    except Exception as e:
+        logger.warning(
+            f"Knowledge graph was not started for {job.filename}: {e}"
+        )
+
+
 class DocumentJob:
     """
     Represents a single document processing job.
@@ -167,6 +193,9 @@ class QueueProcessor:
                 logger.info(
                     f"Finished PDF job: {job.filename}"
                 )
+
+                if job.status == "COMPLETED":
+                    _trigger_graph_generation(job)
 
             except Exception as e:
 
