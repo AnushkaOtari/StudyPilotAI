@@ -1,4 +1,12 @@
-import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  lazy,
+  Suspense,
+} from "react";
 import "../App.css";
 import api from "../services/api";
 import useAuth from "../hooks/useAuth";
@@ -11,7 +19,9 @@ import { normalizeCitations } from "../utils/citations";
 import { canOpenCitation } from "../utils/pdfNavigation";
 
 // pdf.js is only downloaded the first time a citation is opened.
-const PdfViewerModal = lazy(() => import("../components/PdfViewerModal"));
+const PdfViewerModal = lazy(() =>
+  import("../components/PdfViewerModal")
+);
 
 const createDefaultConversation = () => ({
   id: Date.now(),
@@ -22,11 +32,15 @@ const createDefaultConversation = () => ({
 
 function StudyPilot() {
   const { currentUser } = useAuth();
+
   console.log("Current User:", currentUser);
   console.log("User ID:", currentUser?.id);
+
   const userId = currentUser?.id;
+
   const storageKeys = useMemo(() => {
     if (!userId) return null;
+
     return {
       conversations: `studypilot_${userId}_conversations`,
       activeChat: `studypilot_${userId}_active_chat`,
@@ -37,7 +51,7 @@ function StudyPilot() {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
-  
+
   // File upload state for multiple PDFs
   const [files, setFiles] = useState([]);
   const [queueJobs, setQueueJobs] = useState([]);
@@ -47,35 +61,49 @@ function StudyPilot() {
   // Selected PDF to scope RAG queries (null means query all notes)
   const [selectedPdf, setSelectedPdf] = useState(null);
 
-  // Navigation drawer (small screens) and the citation PDF viewer
+  // Navigation drawer and citation PDF viewer
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewer, setViewer] = useState(null);
   const lastFocusRef = useRef(null);
 
+  // Prevent duplicate deletion requests for the same chat
+  const deletingChatsRef = useRef(new Set());
+
   const loadUserConversations = useCallback(() => {
     if (!storageKeys) return [createDefaultConversation()];
+
     const saved = localStorage.getItem(storageKeys.conversations);
+
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+
         if (parsed.length > 0) {
           let updated = false;
+
           const mapped = parsed.map((c) => {
             if (!c.chat_id) {
               c.chat_id = crypto.randomUUID();
               updated = true;
             }
+
             return c;
           });
+
           if (updated) {
-            localStorage.setItem(storageKeys.conversations, JSON.stringify(mapped));
+            localStorage.setItem(
+              storageKeys.conversations,
+              JSON.stringify(mapped)
+            );
           }
+
           return mapped;
         }
       } catch (e) {
         console.error("Failed to parse conversations:", e);
       }
     }
+
     return [createDefaultConversation()];
   }, [storageKeys]);
 
@@ -87,41 +115,61 @@ function StudyPilot() {
 
   useEffect(() => {
     if (!storageKeys) return;
+
     const loadedConversations = loadUserConversations();
     const savedActiveChat = localStorage.getItem(storageKeys.activeChat);
-    const parsedActiveChat = savedActiveChat ? Number(savedActiveChat) : null;
-    const activeChatExists = loadedConversations.some((c) => c.id === parsedActiveChat);
-    const savedSelectedPdf = localStorage.getItem(storageKeys.selectedPdf);
+    const parsedActiveChat = savedActiveChat
+      ? Number(savedActiveChat)
+      : null;
+
+    const activeChatExists = loadedConversations.some(
+      (c) => c.id === parsedActiveChat
+    );
+
+    const savedSelectedPdf = localStorage.getItem(
+      storageKeys.selectedPdf
+    );
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setConversations(loadedConversations);
-    setActiveConversationId(activeChatExists ? parsedActiveChat : loadedConversations[0].id);
+    setActiveConversationId(
+      activeChatExists ? parsedActiveChat : loadedConversations[0].id
+    );
     setSelectedPdf(savedSelectedPdf || null);
     setUploadedFiles([]);
     setQueueJobs([]);
   }, [loadUserConversations, storageKeys]);
 
   // Find active conversation and derive currentChatId
-  const activeConversation = conversations.find(
-    (c) => c.id === activeConversationId
-  ) || conversations[0] || { messages: [] };
+  const activeConversation =
+    conversations.find((c) => c.id === activeConversationId) ||
+    conversations[0] ||
+    { messages: [] };
 
   const currentChatId = activeConversation?.chat_id;
 
   // Persist conversations in localStorage
   useEffect(() => {
     if (storageKeys && conversations.length > 0) {
-      localStorage.setItem(storageKeys.conversations, JSON.stringify(conversations));
+      localStorage.setItem(
+        storageKeys.conversations,
+        JSON.stringify(conversations)
+      );
     }
   }, [conversations, storageKeys]);
 
   useEffect(() => {
     if (storageKeys && activeConversationId) {
-      localStorage.setItem(storageKeys.activeChat, activeConversationId);
+      localStorage.setItem(
+        storageKeys.activeChat,
+        activeConversationId
+      );
     }
   }, [activeConversationId, storageKeys]);
 
   useEffect(() => {
     if (!storageKeys) return;
+
     if (selectedPdf) {
       localStorage.setItem(storageKeys.selectedPdf, selectedPdf);
     } else {
@@ -129,31 +177,40 @@ function StudyPilot() {
     }
   }, [selectedPdf, storageKeys]);
 
-  // Drawer: Esc closes it, and it resets when the screen grows past the
-  // breakpoint where the sidebar is permanently visible.
+  // Drawer: Esc closes it
   useEffect(() => {
     if (!sidebarOpen) return undefined;
+
     const onKeyDown = (event) => {
       if (event.key === "Escape") setSidebarOpen(false);
     };
+
     window.addEventListener("keydown", onKeyDown);
+
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [sidebarOpen]);
 
+  // Close drawer when screen becomes larger
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return undefined;
+
     const query = window.matchMedia("(min-width: 769px)");
+
     const onChange = (event) => {
       if (event.matches) setSidebarOpen(false);
     };
+
     query.addEventListener?.("change", onChange);
+
     return () => query.removeEventListener?.("change", onChange);
   }, []);
 
-  // Open the cited PDF page of the ACTIVE chat in the viewer.
+  // Open the cited PDF page of the ACTIVE chat
   const openCitation = (citation) => {
     if (!currentChatId || !canOpenCitation(citation)) return;
+
     lastFocusRef.current = document.activeElement;
+
     setViewer({
       chatId: currentChatId,
       filename: citation.filename,
@@ -169,8 +226,12 @@ function StudyPilot() {
   // Fetch uploaded files from backend
   const fetchUploadedFiles = async (chatId) => {
     if (!chatId) return;
+
     try {
-      const response = await api.get("/files", { params: { chat_id: chatId } });
+      const response = await api.get("/files", {
+        params: { chat_id: chatId },
+      });
+
       setUploadedFiles(response.data);
     } catch (error) {
       console.error("Error fetching uploaded files:", error);
@@ -180,8 +241,12 @@ function StudyPilot() {
   // Fetch FIFO document queue processing statuses
   const fetchQueueStatus = async (chatId) => {
     if (!chatId) return;
+
     try {
-      const response = await api.get("/upload/status", { params: { chat_id: chatId } });
+      const response = await api.get("/upload/status", {
+        params: { chat_id: chatId },
+      });
+
       setQueueJobs(response.data || []);
     } catch (error) {
       console.error("Error fetching queue status:", error);
@@ -199,31 +264,98 @@ function StudyPilot() {
   // Create a new empty conversation and select it
   const createNewConversation = () => {
     const newId = Date.now();
+
     const newConv = {
       id: newId,
       title: `Conversation ${conversations.length + 1}`,
       messages: [],
-      chat_id: crypto.randomUUID()
+      chat_id: crypto.randomUUID(),
     };
+
     setConversations((prev) => [...prev, newConv]);
     setActiveConversationId(newId);
   };
 
-  // Delete a conversation
-  const deleteConversation = (id, event) => {
-    event.stopPropagation();
-    if (conversations.length === 1) {
-      // If it's the last chat, clear its messages instead of leaving zero conversations
-      const newId = Date.now();
-      setConversations([{ id: newId, title: "Conversation 1", messages: [], chat_id: crypto.randomUUID() }]);
-      setActiveConversationId(newId);
-    } else {
+  // Delete a conversation from backend first, then frontend
+  const deleteConversation = async (id, event) => {
+    event?.stopPropagation();
+
+    const conversationToDelete = conversations.find(
+      (c) => c.id === id
+    );
+
+    if (!conversationToDelete) {
+      console.error("Conversation not found.");
+      return;
+    }
+
+    const chatId = conversationToDelete.chat_id;
+
+    if (!chatId) {
+      alert("This conversation does not have a valid chat ID.");
+      return;
+    }
+
+    if (deletingChatsRef.current.has(chatId)) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this conversation and all its uploaded data?"
+      )
+    ) {
+      return;
+    }
+
+    deletingChatsRef.current.add(chatId);
+
+    try {
+      // Step 1: Delete chat data from backend
+      await api.delete(`/chats/${encodeURIComponent(chatId)}`);
+
+      // Step 2: Only after backend success, update frontend state
       const remaining = conversations.filter((c) => c.id !== id);
-      setConversations(remaining);
-      // If active conversation was deleted, switch active index
-      if (activeConversationId === id) {
-        setActiveConversationId(remaining[0].id);
+      const isActiveChat = activeConversationId === id;
+
+      if (remaining.length === 0) {
+        // Keep one fresh conversation if the last chat was deleted
+        const newConversation = createDefaultConversation();
+
+        setConversations([newConversation]);
+        setActiveConversationId(newConversation.id);
+      } else {
+        setConversations(remaining);
+
+        // If active conversation was deleted, select another one
+        if (isActiveChat) {
+          setActiveConversationId(remaining[0].id);
+        }
       }
+
+      // Reset chat-specific UI state when the active chat is deleted
+      if (isActiveChat) {
+        setUploadedFiles([]);
+        setQueueJobs([]);
+        setFiles([]);
+        setSelectedPdf(null);
+        setUploadStatus("");
+        setQuestion("");
+        setViewer(null);
+      }
+
+      console.log("Chat deleted successfully:", chatId);
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+
+      const message =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        "Could not delete this conversation from the server. Please try again.";
+
+      alert(message);
+    } finally {
+      deletingChatsRef.current.delete(chatId);
     }
   };
 
@@ -232,9 +364,12 @@ function StudyPilot() {
     setConversations((prev) =>
       prev.map((c) => {
         if (c.id === convId && c.title.startsWith("Conversation")) {
-          const truncated = text.length > 22 ? text.slice(0, 22) + "..." : text;
+          const truncated =
+            text.length > 22 ? text.slice(0, 22) + "..." : text;
+
           return { ...c, title: truncated };
         }
+
         return c;
       })
     );
@@ -247,7 +382,15 @@ function StudyPilot() {
       return;
     }
 
-    const duplicate = files.find((f) => uploadedFiles.includes(f.name));
+    if (!currentChatId) {
+      alert("Please select a conversation first.");
+      return;
+    }
+
+    const duplicate = files.find((f) =>
+      uploadedFiles.includes(f.name)
+    );
+
     if (duplicate) {
       alert(
         `A file named "${duplicate.name}" has already been uploaded. Please remove it from your selection or delete the existing one first.`
@@ -260,6 +403,7 @@ function StudyPilot() {
 
     const formData = new FormData();
     formData.append("chat_id", currentChatId);
+
     files.forEach((f) => {
       formData.append("files", f);
     });
@@ -268,18 +412,25 @@ function StudyPilot() {
       const response = await api.post("/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
       const data = response.data;
+
       setUploadStatus(data.message);
+
       if (data.jobs) {
         setQueueJobs(data.jobs);
       }
-      
-      // Refresh the uploaded file list
+
       await fetchUploadedFiles(currentChatId);
       setFiles([]);
     } catch (error) {
       console.error(error);
-      setUploadStatus("Upload failed. Verify backend is running.");
+
+      const message =
+        error.response?.data?.detail ||
+        "Upload failed. Verify backend is running.";
+
+      setUploadStatus(message);
     } finally {
       setUploading(false);
     }
@@ -287,14 +438,21 @@ function StudyPilot() {
 
   // Delete PDF from disk and vector store
   const deletePdf = async (filename) => {
-    if (!confirm(`Are you sure you want to delete "${filename}"?`)) return;
+    if (!window.confirm(`Are you sure you want to delete "${filename}"?`)) {
+      return;
+    }
 
     try {
-      await api.delete(`/files/${encodeURIComponent(filename)}`, {
-        params: { chat_id: currentChatId },
-      });
+      await api.delete(
+        `/files/${encodeURIComponent(filename)}`,
+        {
+          params: { chat_id: currentChatId },
+        }
+      );
+
       await fetchUploadedFiles(currentChatId);
       await fetchQueueStatus(currentChatId);
+
       // If the active scope was the deleted PDF, reset scope
       if (selectedPdf === filename) {
         setSelectedPdf(null);
@@ -310,39 +468,52 @@ function StudyPilot() {
     if (!question.trim()) return;
 
     const userQuestion = question;
+    const chatIdAtRequest = currentChatId;
+    const conversationIdAtRequest = activeConversationId;
+
+    if (!chatIdAtRequest) return;
 
     // Append User Message to Active Chat
     setConversations((prev) =>
       prev.map((c) => {
-        if (c.id === activeConversationId) {
+        if (c.id === conversationIdAtRequest) {
           return {
             ...c,
-            messages: [...c.messages, { role: "user", text: userQuestion }],
+            messages: [
+              ...c.messages,
+              { role: "user", text: userQuestion },
+            ],
           };
         }
+
         return c;
       })
     );
 
-    const activeConv = conversations.find((c) => c.id === activeConversationId);
-    const isFirstMessage = activeConv ? activeConv.messages.length === 0 : true;
+    const activeConv = conversations.find(
+      (c) => c.id === conversationIdAtRequest
+    );
+
+    const isFirstMessage = activeConv
+      ? activeConv.messages.length === 0
+      : true;
 
     setQuestion("");
     setLoading(true);
 
     try {
       const response = await api.post("/ask", {
-          question: userQuestion,
-          chat_id: currentChatId,
-          filename: selectedPdf
-        });
+        question: userQuestion,
+        chat_id: chatIdAtRequest,
+        filename: selectedPdf,
+      });
 
       const data = response.data;
 
-      // Append Assistant Message to Active Chat
+      // Append Assistant Message to the original conversation
       setConversations((prev) =>
         prev.map((c) => {
-          if (c.id === activeConversationId) {
+          if (c.id === conversationIdAtRequest) {
             return {
               ...c,
               messages: [
@@ -355,19 +526,24 @@ function StudyPilot() {
               ],
             };
           }
+
           return c;
         })
       );
 
-      // Name conversation after the user's first query
+      // Name conversation after the users first query
       if (isFirstMessage) {
-        updateConversationTitle(activeConversationId, userQuestion);
+        updateConversationTitle(
+          conversationIdAtRequest,
+          userQuestion
+        );
       }
     } catch (error) {
       console.error(error);
+
       setConversations((prev) =>
         prev.map((c) => {
-          if (c.id === activeConversationId) {
+          if (c.id === conversationIdAtRequest) {
             return {
               ...c,
               messages: [
@@ -379,6 +555,7 @@ function StudyPilot() {
               ],
             };
           }
+
           return c;
         })
       );

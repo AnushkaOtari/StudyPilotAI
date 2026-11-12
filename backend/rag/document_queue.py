@@ -1,7 +1,10 @@
+
 import uuid
 import logging
+import threading
 from collections import deque
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
+
 from rag.rag_pipeline import load_pdf
 
 logger = logging.getLogger(__name__)
@@ -9,15 +12,22 @@ logger = logging.getLogger(__name__)
 
 class DocumentJob:
     """
-    Represents a single document processing job in the queue.
+    Represents a single document processing job.
     """
-    def __init__(self, file_path: str, filename: str, user_id: int, chat_id: str):
+
+    def __init__(
+        self,
+        file_path: str,
+        filename: str,
+        user_id: int,
+        chat_id: str
+    ):
         self.job_id: str = str(uuid.uuid4())
         self.file_path: str = file_path
         self.filename: str = filename
         self.user_id: int = user_id
         self.chat_id: str = chat_id
-        self.status: str = "WAITING"  # WAITING, PROCESSING, COMPLETED, FAILED
+        self.status: str = "WAITING"
         self.error: Optional[str] = None
 
     def to_dict(self) -> Dict:
@@ -33,94 +43,205 @@ class DocumentJob:
 
 class DocumentQueue:
     """
-    A FIFO (First-In, First-Out) Document Processing Queue implemented using collections.deque.
-    Complexity:
-      enqueue  -> O(1)
-      dequeue  -> O(1)
-      is_empty -> O(1)
-      size     -> O(1)
+    FIFO document processing queue.
     """
 
     def __init__(self):
         self._queue = deque()
 
     def enqueue(self, job: DocumentJob) -> None:
-        """Add a job to the end of the queue. O(1)"""
         self._queue.append(job)
 
     def dequeue(self) -> Optional[DocumentJob]:
-        """Remove and return the job at the front of the queue. O(1)"""
-        if self.is_empty():
+        if not self._queue:
             return None
         return self._queue.popleft()
 
     def is_empty(self) -> bool:
-        """Check if the queue is empty. O(1)"""
         return len(self._queue) == 0
 
     def size(self) -> int:
-        """Return the number of items currently in the queue. O(1)"""
         return len(self._queue)
 
 
 class QueueProcessor:
     """
-    Manages document processing queues and executes document indexing jobs
-    sequentially in strict FIFO order using the existing RAG load_pdf() pipeline.
+    Processes PDF jobs sequentially and safely.
     """
 
     def __init__(self):
         self.queue = DocumentQueue()
-        self.jobs_by_chat: Dict[str, List[DocumentJob]] = {}
+
+        # Jobs are separated by user and chat
+        self.jobs_by_chat: Dict[
+            Tuple[int, str], List[DocumentJob]
+        ] = {}
+
         self.is_processing = False
 
+        # Thread synchronization
+        self.lock = threading.RLock()
+        self.processing_done = threading.Event()
+        self.processing_done.set()
+
+        # Chats marked for permanent deletion
+        self.deleted_chats = set()
+
     def add_jobs(self, jobs: List[DocumentJob]) -> List[Dict]:
-        """Enqueues new jobs and processes them in FIFO order."""
-        for job in jobs:
-            if job.chat_id not in self.jobs_by_chat:
-                self.jobs_by_chat[job.chat_id] = []
-            self.jobs_by_chat[job.chat_id].append(job)
-            self.queue.enqueue(job)
+        """
+        Add jobs safely and process them in FIFO order.
+        """
+
+        with self.lock:
+
+            # Validate all jobs before adding any
+            for job in jobs:
+                chat_key = (job.user_id, job.chat_id)
+
+                if chat_key in self.deleted_chats:
+                    raise ValueError(
+                        "This chat has been deleted."
+                    )
+
+            for job in jobs:
+                chat_key = (job.user_id, job.chat_id)
+
+                if chat_key not in self.jobs_by_chat:
+                    self.jobs_by_chat[chat_key] = []
+
+                self.jobs_by_chat[chat_key].append(job)
+                self.queue.enqueue(job)
 
         self.process_queue()
+
         return [job.to_dict() for job in jobs]
 
     def process_queue(self):
-        """Processes all jobs in the queue sequentially in FIFO order."""
-        if self.is_processing:
-            return
+        """
+        Process queued jobs sequentially and safely.
+        """
 
-        self.is_processing = True
-        try:
-            while not self.queue.is_empty():
+        with self.lock:
+            if self.is_processing:
+                return
+
+            self.is_processing = True
+            self.processing_done.clear()
+
+        while True:
+
+            with self.lock:
                 job = self.queue.dequeue()
+
                 if job is None:
-                    break
+                    self.is_processing = False
+                    self.processing_done.set()
+                    return
+
+                chat_key = (job.user_id, job.chat_id)
+
+                if chat_key in self.deleted_chats:
+                    job.status = "CANCELLED"
+                    continue
 
                 job.status = "PROCESSING"
-                logger.info(f"Processing PDF job: {job.filename} for chat {job.chat_id}")
 
-                try:
-                    # Reuse existing RAG pipeline load_pdf() function
-                    load_pdf(job.file_path, job.user_id, job.chat_id)
-                    job.status = "COMPLETED"
-                    logger.info(f"Successfully processed PDF: {job.filename}")
-                except Exception as e:
+            logger.info(
+                f"Processing PDF job: {job.filename} "
+                f"for chat {job.chat_id}"
+            )
+
+            try:
+                load_pdf(
+                    job.file_path,
+                    job.user_id,
+                    job.chat_id
+                )
+
+                with self.lock:
+                    if chat_key in self.deleted_chats:
+                        job.status = "CANCELLED"
+                    else:
+                        job.status = "COMPLETED"
+
+                logger.info(
+                    f"Finished PDF job: {job.filename}"
+                )
+
+            except Exception as e:
+
+                with self.lock:
                     job.status = "FAILED"
                     job.error = str(e)
-                    logger.error(f"Failed to process PDF {job.filename}: {e}", exc_info=True)
-        finally:
-            self.is_processing = False
 
-    def get_chat_job_statuses(self, chat_id: str) -> List[Dict]:
-        """Returns the processing status of all jobs for a specific chat."""
-        jobs = self.jobs_by_chat.get(chat_id, [])
-        return [job.to_dict() for job in jobs]
+                logger.error(
+                    f"Failed to process PDF {job.filename}: {e}",
+                    exc_info=True
+                )
 
-    def clear_chat_jobs(self, chat_id: str):
-        """Clears job status history for a chat."""
-        if chat_id in self.jobs_by_chat:
-            del self.jobs_by_chat[chat_id]
+    def cancel_chat(self, user_id: int, chat_id: str):
+        """
+        Mark a chat as deleted, cancel waiting jobs,
+        and wait for active queue processing to finish.
+        """
+
+        chat_key = (user_id, chat_id)
+
+        with self.lock:
+
+            # Prevent new jobs from entering this chat
+            self.deleted_chats.add(chat_key)
+
+            # Cancel waiting jobs for this chat
+            remaining_jobs = deque()
+
+            while self.queue._queue:
+                job = self.queue._queue.popleft()
+
+                if (job.user_id, job.chat_id) == chat_key:
+                    job.status = "CANCELLED"
+                else:
+                    remaining_jobs.append(job)
+
+            self.queue._queue = remaining_jobs
+
+        # Wait until the processing loop finishes.
+        # This also allows an active job to finish before
+        # the chat's files and vectorstore are deleted.
+        self.processing_done.wait()
+
+        with self.lock:
+            self.jobs_by_chat.pop(chat_key, None)
+
+        logger.info(
+            f"Cancelled all document jobs for "
+            f"user {user_id}, chat {chat_id}"
+        )
+
+    def get_chat_job_statuses(
+        self,
+        user_id: int,
+        chat_id: str
+    ) -> List[Dict]:
+        """
+        Return job statuses for a specific user's chat.
+        """
+
+        chat_key = (user_id, chat_id)
+
+        with self.lock:
+            jobs = self.jobs_by_chat.get(chat_key, [])
+            return [job.to_dict() for job in jobs]
+
+    def clear_chat_jobs(self, user_id: int, chat_id: str):
+        """
+        Clear job history for a specific user's chat.
+        """
+
+        chat_key = (user_id, chat_id)
+
+        with self.lock:
+            self.jobs_by_chat.pop(chat_key, None)
 
 
 global_queue_processor = QueueProcessor()

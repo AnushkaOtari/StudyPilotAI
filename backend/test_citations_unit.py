@@ -15,15 +15,24 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from citation_test_support import (  # noqa: E402
-    GEMINI, context_blocks, faithful_model, install_stubs, labels_containing,
+from citation_test_support import (
+    GEMINI,
+    context_blocks,
+    faithful_model,
+    install_stubs,
+    labels_containing,
 )
 
+# Install mocks BEFORE importing the RAG modules.
 install_stubs()
 
-from rag import qa, rag_pipeline as rp  # noqa: E402
-from rag.citations import (  # noqa: E402
-    assign_source_refs, build_citations, format_context, parse_source_refs,
+from backend.rag import rag_pipeline as rp
+from rag import qa
+from rag.citations import (
+    assign_source_refs,
+    build_citations,
+    format_context,
+    parse_source_refs,
     resolve_citations,
 )
 

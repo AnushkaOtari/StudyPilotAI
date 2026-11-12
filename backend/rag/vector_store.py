@@ -69,7 +69,7 @@ class VectorStore:
 
         for idx in indices[0]:
 
-            if idx < len(self.documents):
+            if 0 <= idx < len(self.documents):
                 results.append(
                     self.documents[idx]
                 )

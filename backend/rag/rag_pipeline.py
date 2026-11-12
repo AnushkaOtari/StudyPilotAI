@@ -1,6 +1,11 @@
+
 import os
 import re
 import time
+import shutil
+from collections import OrderedDict
+from threading import RLock
+
 from rag.chunker import chunk_text
 from rag.pdf_reader import extract_text, extract_text_by_page
 from rag.embedder import get_embedding
@@ -9,22 +14,30 @@ from rag.qa import answer_question_with_sources
 from rag.citations import format_context, resolve_citations
 from rag.resource_hash_table import global_resource_hash_table
 
-# -----------------------------
-# Per-chat state
-# -----------------------------
-# Every authenticated user's chat gets its own FAISS-backed VectorStore and
-# short conversational history. Both are keyed by user_id + chat_id so data
-# cannot leak between users even if chat ids collide.
 
-# Exact reply the prompt in rag/qa.py requires when the PDF context has no answer.
+# -----------------------------
+# Configuration
+# -----------------------------
+
 NOT_FOUND_ANSWER = "I couldn't find this information in the uploaded notes."
 
 VECTORSTORE_FOLDER = "vectorstores"
 SAFE_SEGMENT_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
-_stores = {}          # (user_id, chat_id) -> VectorStore (in-memory cache)
-_chat_histories = {}  # (user_id, chat_id) -> list of {question, answer}
+MAX_CACHED_STORES = 10
 
+_stores = OrderedDict()
+_stores_lock = RLock()
+
+_chat_histories = {}
+
+# Chats marked for deletion cannot be indexed again.
+_deleting_chats = set()
+
+
+# -----------------------------
+# Chat helpers
+# -----------------------------
 
 def _store_key(user_id, chat_id):
     return (str(user_id), str(chat_id))
@@ -32,43 +45,123 @@ def _store_key(user_id, chat_id):
 
 def _safe_segment(value, name):
     value = str(value)
+
     if not SAFE_SEGMENT_RE.match(value):
         raise ValueError(f"Invalid {name}.")
+
     return value
 
 
 def _store_folder(user_id, chat_id):
     user_id = _safe_segment(user_id, "user id")
     chat_id = _safe_segment(chat_id, "chat id")
-    return os.path.join(VECTORSTORE_FOLDER, f"user_{user_id}", f"chat_{chat_id}")
+
+    return os.path.join(
+        VECTORSTORE_FOLDER,
+        f"user_{user_id}",
+        f"chat_{chat_id}"
+    )
 
 
-def _get_store(user_id, chat_id):
-    """Return the VectorStore for this chat, loading it from disk into the
-    in-memory cache on first use. Returns None if the chat has no store yet
-    (i.e. nothing has been uploaded to it)."""
+def mark_chat_deleting(user_id, chat_id):
+    """
+    Mark a chat as permanently deleted.
+
+    Call this before cancelling queued jobs and cleaning up files.
+    """
 
     key = _store_key(user_id, chat_id)
-    if key in _stores:
-        return _stores[key]
 
-    loaded = VectorStore.load(_store_folder(user_id, chat_id))
-    if loaded is not None:
+    with _stores_lock:
+        _deleting_chats.add(key)
+
+    print(f"Chat marked for deletion: {key}")
+
+
+def is_chat_deleting(user_id, chat_id):
+    """Check whether a chat has been marked for deletion."""
+
+    key = _store_key(user_id, chat_id)
+
+    with _stores_lock:
+        return key in _deleting_chats
+
+
+# -----------------------------
+# Vector store management
+# -----------------------------
+
+def _get_store(user_id, chat_id):
+    """Load a chat's vectorstore and maintain an LRU cache."""
+
+    key = _store_key(user_id, chat_id)
+
+    with _stores_lock:
+
+        if key in _deleting_chats:
+            return None
+
+        # Cache hit
+        if key in _stores:
+            _stores.move_to_end(key)
+            return _stores[key]
+
+        # Load from disk
+        loaded = VectorStore.load(
+            _store_folder(user_id, chat_id)
+        )
+
+        if loaded is None:
+            return None
+
+        # Check again before caching
+        if key in _deleting_chats:
+            return None
+
         _stores[key] = loaded
 
-    return loaded
+        # LRU eviction
+        while len(_stores) > MAX_CACHED_STORES:
+            evicted_key, _ = _stores.popitem(last=False)
 
+            print(
+                f"Evicted vectorstore from RAM cache: {evicted_key}"
+            )
+
+        return loaded
+
+
+# -----------------------------
+# PDF loading and indexing
+# -----------------------------
 
 def load_pdf(pdf_path, user_id, chat_id):
-    print(f"Loading PDF into user {user_id}, chat {chat_id}: {pdf_path}")
+
+    key = _store_key(user_id, chat_id)
+
+    # Stop immediately if chat is deleted.
+    with _stores_lock:
+        if key in _deleting_chats:
+            print(f"Skipping PDF indexing for deleted chat: {key}")
+            return
+
+    print(
+        f"Loading PDF into user {user_id}, "
+        f"chat {chat_id}: {pdf_path}"
+    )
 
     pages = extract_text_by_page(pdf_path)
+
     print("Pages Extracted:", len(pages))
 
     chunks_with_metadata = []
+
     for page_num, page_text in pages:
+
         page_chunks = chunk_text(page_text)
+
         for chunk in page_chunks:
+
             chunks_with_metadata.append({
                 "text": chunk,
                 "source": os.path.basename(pdf_path),
@@ -76,7 +169,8 @@ def load_pdf(pdf_path, user_id, chat_id):
             })
 
     print("Chunks:", len(chunks_with_metadata))
-    if len(chunks_with_metadata) == 0:
+
+    if not chunks_with_metadata:
         print(f"No readable text found in {pdf_path}")
         return
 
@@ -85,89 +179,176 @@ def load_pdf(pdf_path, user_id, chat_id):
         for item in chunks_with_metadata
     ]
 
-    if len(embeddings) == 0:
+    if not embeddings:
         print(f"No embeddings generated for {pdf_path}")
         return
 
     print("Embeddings:", len(embeddings))
 
-    store = _get_store(user_id, chat_id)
-    if store is None:
-        store = VectorStore(len(embeddings[0]))
+    store_folder = _store_folder(user_id, chat_id)
 
-    store.add(
-        embeddings,
-        chunks_with_metadata,
-        pdf_path
+    # Commit indexing under the lock.
+    # This prevents deletion from racing with vectorstore writes.
+    with _stores_lock:
+
+        if key in _deleting_chats:
+            print(
+                f"Aborting indexing because chat was deleted: {key}"
+            )
+            return
+
+        store = _get_store(user_id, chat_id)
+
+        if store is None:
+            store = VectorStore(len(embeddings[0]))
+
+        store.add(
+            embeddings,
+            chunks_with_metadata,
+            os.path.basename(pdf_path)
+        )
+
+        # Persist vectorstore
+        store.save(store_folder)
+
+        _stores[key] = store
+        _stores.move_to_end(key)
+
+        # LRU eviction
+        while len(_stores) > MAX_CACHED_STORES:
+            evicted_key, _ = _stores.popitem(last=False)
+
+            print(
+                f"Evicted vectorstore from RAM cache: {evicted_key}"
+            )
+
+        # Reset conversation history after a new upload.
+        _chat_histories[key] = []
+
+        # Resource metadata
+        filename = os.path.basename(pdf_path)
+
+        resource_key = f"{user_id}:{chat_id}:{filename}"
+
+        file_size = (
+            os.path.getsize(pdf_path)
+            if os.path.exists(pdf_path)
+            else 0
+        )
+
+        resource_metadata = {
+            "resource_id": f"{user_id}_{chat_id}_{filename}",
+            "filename": filename,
+            "user_id": user_id,
+            "chat_id": chat_id,
+            "file_path": pdf_path,
+            "file_size": file_size,
+            "total_pages": len(pages),
+            "total_chunks": len(chunks_with_metadata),
+            "status": "COMPLETED",
+            "indexed_at": time.time()
+        }
+
+        # Metadata insertion is also protected by the lock.
+        if key not in _deleting_chats:
+            global_resource_hash_table.insert(
+                resource_key,
+                resource_metadata
+            )
+
+    print(
+        f"Knowledge base & Resource Hash Table updated "
+        f"for user {user_id}, chat {chat_id}"
     )
 
-    # Persist to disk immediately so the index survives a server restart
-    # without needing to re-embed every PDF.
-    store.save(_store_folder(user_id, chat_id))
-    _stores[_store_key(user_id, chat_id)] = store
 
-    # A new upload changes the chat's knowledge base, so its conversational
-    # context is no longer reliable — reset it.
-    _chat_histories[_store_key(user_id, chat_id)] = []
-
-    # Index document resource metadata into Resource Hash Table (O(1) insertion)
-    filename = os.path.basename(pdf_path)
-    resource_key = f"{user_id}:{chat_id}:{filename}"
-    file_size = os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0
-
-    resource_metadata = {
-        "resource_id": f"{user_id}_{chat_id}_{filename}",
-        "filename": filename,
-        "user_id": user_id,
-        "chat_id": chat_id,
-        "file_path": pdf_path,
-        "file_size": file_size,
-        "total_pages": len(pages),
-        "total_chunks": len(chunks_with_metadata),
-        "status": "COMPLETED",
-        "indexed_at": time.time()
-    }
-    global_resource_hash_table.insert(resource_key, resource_metadata)
-
-    print(f"Knowledge base & Resource Hash Table updated for user {user_id}, chat {chat_id}")
-
+# -----------------------------
+# Vector store status
+# -----------------------------
 
 def has_vector_store(user_id, chat_id):
-    """Return True if this chat has an indexed vector store on disk/in-memory
-    (i.e. at least one PDF has been successfully uploaded and embedded).
-    Lets callers give a specific "no documents uploaded" message instead of
-    a generic empty-retrieval message."""
 
-    return _get_store(user_id, chat_id) is not None
+    if is_chat_deleting(user_id, chat_id):
+        return False
+
+    store_folder = _store_folder(user_id, chat_id)
+
+    index_path = os.path.join(
+        store_folder,
+        "faiss.index"
+    )
+
+    docs_path = os.path.join(
+        store_folder,
+        "documents.pkl"
+    )
+
+    return (
+        os.path.exists(index_path)
+        and os.path.exists(docs_path)
+    )
 
 
-def retrieve_context(query, user_id, chat_id, filename=None, k=8):
+# -----------------------------
+# Context retrieval
+# -----------------------------
 
-    store = _get_store(user_id, chat_id)
+def retrieve_context(
+    query,
+    user_id,
+    chat_id,
+    filename=None,
+    k=8
+):
 
-    if store is None:
+    if is_chat_deleting(user_id, chat_id):
         return "", []
 
     query_embedding = get_embedding(query)
 
-    if filename:
-        results = store.search(query_embedding, k=20)
-        results = [
-            doc for doc in results
-            if doc["source"].replace("\\", "/").endswith(filename)
-        ]
-        results = results[:k]
+    with _stores_lock:
 
-    else:
-        results = store.search(query_embedding, k=k)
+        if is_chat_deleting(user_id, chat_id):
+            return "", []
 
-    # Each chunk is labelled [S1], [S2], ... for this request so the model can
-    # say which blocks it used (see rag/citations.py).
-    context = format_context(results)
+        store = _get_store(user_id, chat_id)
+
+        if store is None:
+            return "", []
+
+        if filename:
+
+            results = store.search(
+                query_embedding,
+                k=20
+            )
+
+            results = [
+                doc for doc in results
+                if doc["source"].replace("\\", "/").endswith(filename)
+            ]
+
+            results = results[:k]
+
+        else:
+
+            results = store.search(
+                query_embedding,
+                k=k
+            )
+
+        # Label each retrieved chunk [S1], [S2], etc.
+        context = format_context(results)
 
     return context, results
 
+
+# -----------------------------
+# Follow-up question handling
+# -----------------------------
+
 def resolve_followup_question(question, chat_history):
+
     question_lower = question.lower().strip()
 
     followup_phrases = [
@@ -186,14 +367,24 @@ def resolve_followup_question(question, chat_history):
 
     is_followup = (
         len(question.split()) <= 6
-        or any(phrase in question_lower for phrase in followup_phrases)
+        or any(
+            phrase in question_lower
+            for phrase in followup_phrases
+        )
     )
 
     if is_followup and chat_history:
-        previous_question = chat_history[-1].get("question", "")
-        previous_answer = chat_history[-1].get("answer", "")
+
+        previous_question = (
+            chat_history[-1].get("question", "")
+        )
+
+        previous_answer = (
+            chat_history[-1].get("answer", "")
+        )
 
         if previous_question:
+
             return (
                 f"Previous question: {previous_question}\n"
                 f"Previous answer: {previous_answer}\n"
@@ -203,7 +394,25 @@ def resolve_followup_question(question, chat_history):
     return question
 
 
-def ask_rag(question, user_id, chat_id, filename=None):
+# -----------------------------
+# RAG question answering
+# -----------------------------
+
+def ask_rag(
+    question,
+    user_id,
+    chat_id,
+    filename=None
+):
+
+    key = _store_key(user_id, chat_id)
+
+    if is_chat_deleting(user_id, chat_id):
+        return {
+            "answer": "This chat has been deleted.",
+            "sources": [],
+            "citations": []
+        }
 
     store = _get_store(user_id, chat_id)
 
@@ -214,25 +423,32 @@ def ask_rag(question, user_id, chat_id, filename=None):
             "citations": []
         }
 
-    key = _store_key(user_id, chat_id)
-    chat_history = _chat_histories.setdefault(key, [])
-
-    total_start = time.time()
-    retrieval_question = resolve_followup_question(
-    question, chat_history
+    chat_history = _chat_histories.setdefault(
+        key,
+        []
     )
 
+    total_start = time.time()
+
+    retrieval_question = resolve_followup_question(
+        question,
+        chat_history
+    )
 
     start = time.time()
+
     context, results = retrieve_context(
-        query=question,
+        query=retrieval_question,
         user_id=user_id,
         chat_id=chat_id,
         filename=filename,
         k=2 if filename else 8
     )
 
-    print(f"Retrieval Time : {time.time()-start:.2f} sec")
+    print(
+        f"Retrieval Time : {time.time()-start:.2f} sec"
+    )
+
     # ---------------- Mode Detection ---------------- #
 
     question_lower = question.lower()
@@ -243,6 +459,7 @@ def ask_rag(question, user_id, chat_id, filename=None):
         "meaning of",
         "who is"
     ]):
+
         mode = "short"
 
     elif any(word in question_lower for word in [
@@ -251,9 +468,11 @@ def ask_rag(question, user_id, chat_id, filename=None):
         "detail",
         "elaborate"
     ]):
+
         mode = "detailed"
 
     else:
+
         mode = "normal"
 
     # ---------------- LLM ---------------- #
@@ -267,19 +486,21 @@ def ask_rag(question, user_id, chat_id, filename=None):
         mode
     )
 
-    print(f"LLM Time : {time.time()-start:.2f} sec")
-
-    chat_history.append(
-        {
-            "question": question,
-            "answer": answer
-        }
+    print(
+        f"LLM Time : {time.time()-start:.2f} sec"
     )
+
+    chat_history.append({
+        "question": question,
+        "answer": answer
+    })
 
     if len(chat_history) > 5:
         chat_history.pop(0)
 
-    print(f"TOTAL TIME : {time.time()-total_start:.2f} sec")
+    print(
+        f"TOTAL TIME : {time.time()-total_start:.2f} sec"
+    )
 
     sources = list(
         set(
@@ -287,18 +508,30 @@ def ask_rag(question, user_id, chat_id, filename=None):
         )
     )
 
-    # Citations: only references that the model named AND that label a chunk
-    # which was really retrieved for this request. Filename, page and text come
-    # from the retrieved chunk, never from the model. Retrieval alone is not
-    # evidence, so an answer with no valid reference has no citations. The
-    # fixed "not found" reply never cites anything.
-    if answer is not None and answer.strip() == NOT_FOUND_ANSWER:
+    # ---------------- Citations ---------------- #
+
+    if (
+        answer is not None
+        and answer.strip() == NOT_FOUND_ANSWER
+    ):
+
         citations = []
+
     else:
-        resolved = resolve_citations(results, claimed_refs)
+
+        resolved = resolve_citations(
+            results,
+            claimed_refs
+        )
+
         citations = resolved["citations"]
+
         if resolved["invalid_refs"]:
-            print(f"Ignored invalid source references: {resolved['invalid_refs']}")
+
+            print(
+                "Ignored invalid source references: "
+                f"{resolved['invalid_refs']}"
+            )
 
     return {
         "answer": answer,
@@ -307,31 +540,147 @@ def ask_rag(question, user_id, chat_id, filename=None):
     }
 
 
-def delete_pdf_and_rebuild(filename, user_id, chat_id, upload_folder):
+# -----------------------------
+# Delete one PDF and rebuild
+# -----------------------------
 
-    file_path = os.path.join(upload_folder, filename)
+def delete_pdf_and_rebuild(
+    filename,
+    user_id,
+    chat_id,
+    upload_folder
+):
+
+    file_path = os.path.join(
+        upload_folder,
+        filename
+    )
+
     if os.path.exists(file_path):
+
         os.remove(file_path)
-        print(f"Deleted file {file_path} from disk.")
 
-    # Remove document metadata from Resource Hash Table
+        print(
+            f"Deleted file {file_path} from disk."
+        )
+
+    # Remove resource metadata for this PDF.
     resource_key = f"{user_id}:{chat_id}:{filename}"
-    global_resource_hash_table.delete(resource_key)
 
-    # Drop this chat's store (memory + disk) and its history, then rebuild
-    # from whatever PDFs remain in this chat's upload folder.
+    global_resource_hash_table.delete(
+        resource_key
+    )
+
     key = _store_key(user_id, chat_id)
-    _stores.pop(key, None)
-    _chat_histories.pop(key, None)
 
-    store_folder = _store_folder(user_id, chat_id)
-    for fname in ("faiss.index", "documents.pkl"):
-        fpath = os.path.join(store_folder, fname)
-        if os.path.exists(fpath):
-            os.remove(fpath)
+    store_folder = _store_folder(
+        user_id,
+        chat_id
+    )
 
+    # Drop cached store and old index.
+    with _stores_lock:
+
+        if key in _deleting_chats:
+            raise ValueError("This chat has been deleted.")
+
+        _stores.pop(key, None)
+        _chat_histories.pop(key, None)
+
+        for fname in (
+            "faiss.index",
+            "documents.pkl"
+        ):
+
+            fpath = os.path.join(
+                store_folder,
+                fname
+            )
+
+            if os.path.exists(fpath):
+                os.remove(fpath)
+
+    # Rebuild using remaining PDFs.
     if os.path.exists(upload_folder):
+
         for fname in os.listdir(upload_folder):
+
             if fname.lower().endswith(".pdf"):
-                full_path = os.path.join(upload_folder, fname)
-                load_pdf(full_path, user_id, chat_id)
+
+                full_path = os.path.join(
+                    upload_folder,
+                    fname
+                )
+
+                load_pdf(
+                    full_path,
+                    user_id,
+                    chat_id
+                )
+
+
+# -----------------------------
+# Delete entire chat
+# -----------------------------
+
+def delete_chat_data(user_id, chat_id):
+    """
+    Permanently remove a chat's vectorstore,
+    in-memory history and resource metadata.
+
+    The deletion marker remains in memory so that
+    the deleted chat cannot be indexed again.
+    """
+
+    key = _store_key(user_id, chat_id)
+
+    store_folder = _store_folder(
+        user_id,
+        chat_id
+    )
+
+    # Mark deleted before removing any data.
+    with _stores_lock:
+
+        _deleting_chats.add(key)
+
+        # Remove in-memory data.
+        _stores.pop(key, None)
+
+        _chat_histories.pop(key, None)
+
+        # Remove persisted vectorstore directory.
+        if os.path.exists(store_folder):
+
+            shutil.rmtree(store_folder)
+
+        # Remove empty parent user directory.
+        user_folder = os.path.dirname(
+            store_folder
+        )
+
+        if (
+            os.path.isdir(user_folder)
+            and not os.listdir(user_folder)
+        ):
+
+            os.rmdir(user_folder)
+
+    # Remove every resource metadata entry belonging
+    # to this user's chat.
+    metadata = global_resource_hash_table.to_dict()
+
+    prefix = f"{user_id}:{chat_id}:"
+
+    for resource_key in list(metadata.keys()):
+
+        if resource_key.startswith(prefix):
+
+            global_resource_hash_table.delete(
+                resource_key
+            )
+
+    print(
+        f"Deleted all RAG data for user {user_id}, "
+        f"chat {chat_id}"
+    )
