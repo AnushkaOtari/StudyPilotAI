@@ -1,0 +1,361 @@
+/* ---------- Panel layout ---------- */
+
+.mindmap-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  padding: 18px 28px 20px;
+}
+
+.mindmap-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.mindmap-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.mindmap-title h2 {
+  font-size: var(--font-h4);
+}
+
+.mindmap-stats {
+  font-size: var(--font-xs);
+  color: var(--text-faint);
+}
+
+.mindmap-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.mindmap-updating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.mindmap-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The graph and its details panel. */
+.mindmap-stage {
+  flex: 1;
+  display: flex;
+  position: relative;
+
+  min-height: 320px;
+  overflow: hidden;
+
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card-alt);
+  box-shadow: var(--shadow-sm);
+}
+
+.mindmap-stage-canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- Buttons ---------- */
+
+.mindmap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  min-height: 36px;
+  padding: 0 14px;
+
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-main);
+
+  font-size: var(--font-sm);
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mindmap-btn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  border-color: var(--border-color-hover);
+}
+
+.mindmap-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent-hover);
+}
+
+.mindmap-btn.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.mindmap-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mindmap-link-btn {
+  margin-left: auto;
+  padding: 4px 8px;
+
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+
+  font-size: var(--font-xs);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mindmap-link-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------- Notices ---------- */
+
+.mindmap-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+
+  padding: 10px 14px;
+
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+
+  font-size: var(--font-sm);
+  line-height: 1.4;
+}
+
+.mindmap-notice > svg {
+  flex-shrink: 0;
+}
+
+.mindmap-notice.tone-error {
+  border-color: #f3c0c0;
+  background: #fdf1f1;
+}
+
+.mindmap-notice.tone-error > svg {
+  color: var(--danger);
+}
+
+.mindmap-notice.tone-warn > svg {
+  color: var(--text-muted);
+}
+
+/* ---------- State cards (loading / empty / processing / failed) ---------- */
+
+.mindmap-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  min-height: 240px;
+  padding: 32px 20px;
+
+  border: 1px dashed var(--border-color-hover);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+
+  text-align: center;
+}
+
+.mindmap-state h3 {
+  font-size: var(--font-h5);
+}
+
+.mindmap-state p {
+  max-width: 460px;
+  font-size: var(--font-body);
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.mindmap-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 56px;
+  height: 56px;
+
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--text-main);
+}
+
+.mindmap-state-icon.tone-error {
+  background: #fdf1f1;
+  color: var(--danger);
+}
+
+/* Inside the stage (graph viewer still loading) the card fills the area. */
+.mindmap-stage-canvas > .mindmap-state {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: transparent;
+}
+
+/* ---------- Per-PDF list ---------- */
+
+.mindmap-doc-list {
+  width: 100%;
+  max-width: 460px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  list-style: none;
+  text-align: left;
+}
+
+.mindmap-doc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+
+  padding: 8px 12px;
+
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-alt);
+
+  font-size: var(--font-sm);
+}
+
+.mindmap-doc-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mindmap-doc-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mindmap-doc-name svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.mindmap-doc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mindmap-doc.status-failed .mindmap-doc-status {
+  color: var(--danger);
+}
+
+.mindmap-doc-error {
+  flex-basis: 100%;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Tablet and phone ---------- */
+
+@media (max-width: 1200px) {
+  .mindmap-panel {
+    padding: 16px 24px 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mindmap-panel {
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+
+  .mindmap-stage {
+    min-height: 280px;
+    border-radius: var(--radius-md);
+  }
+
+  .mindmap-btn {
+    min-height: 40px;
+  }
+
+  .mindmap-state {
+    min-height: 200px;
+    padding: 24px 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Keep only the icon of the Refresh button. */
+  .mindmap-btn-text {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mindmap-btn {
+    transition: none;
+  }
+}
+
+/* ---------- Tab panel wrapper (rendered by StudyPilot) ---------- */
+
+.mindmap-tabpanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}

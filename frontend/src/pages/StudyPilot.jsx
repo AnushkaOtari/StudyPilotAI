@@ -15,8 +15,16 @@ import Header from "../components/Header";
 import UploadBox from "../components/UploadBox";
 import ChatBox from "../components/ChatBox";
 import ChatInput from "../components/ChatInput";
+import ViewTabs from "../components/ViewTabs";
+import MindMapPanel from "../components/MindMapPanel";
 import { normalizeCitations } from "../utils/citations";
 import { canOpenCitation } from "../utils/pdfNavigation";
+import {
+  VIEW_CHAT,
+  VIEW_MINDMAP,
+  viewPanelId,
+  viewTabId,
+} from "../utils/knowledgeGraph";
 
 // pdf.js is only downloaded the first time a citation is opened.
 const PdfViewerModal = lazy(() =>
@@ -68,6 +76,17 @@ function StudyPilot() {
 
   // Prevent duplicate deletion requests for the same chat
   const deletingChatsRef = useRef(new Set());
+
+  // Chat | Mind Map tabs. The chat stays mounted (just hidden) while the Mind
+  // Map is open, and the Mind Map is not mounted, so it requests nothing,
+  // until its tab is opened for the first time.
+  const [activeView, setActiveView] = useState(VIEW_CHAT);
+  const [mindMapOpened, setMindMapOpened] = useState(false);
+
+  const changeView = (view) => {
+    setActiveView(view);
+    if (view === VIEW_MINDMAP) setMindMapOpened(true);
+  };
 
   const loadUserConversations = useCallback(() => {
     if (!storageKeys) return [createDefaultConversation()];
@@ -147,6 +166,11 @@ function StudyPilot() {
     { messages: [] };
 
   const currentChatId = activeConversation?.chat_id;
+
+  // Changes when this chat's PDFs change, so an open Mind Map reloads.
+  const mindMapRefreshKey = `${uploadedFiles.join("|")}#${queueJobs
+    .map((job) => `${job.filename}:${job.status}`)
+    .join("|")}`;
 
   // Persist conversations in localStorage
   useEffect(() => {
@@ -606,7 +630,15 @@ function StudyPilot() {
           menuOpen={sidebarOpen}
         />
 
-        <div className="chat-container">
+        <ViewTabs activeView={activeView} onChange={changeView} />
+
+        <div
+          className="chat-container"
+          id={viewPanelId(VIEW_CHAT)}
+          role="tabpanel"
+          aria-labelledby={viewTabId(VIEW_CHAT)}
+          style={activeView === VIEW_CHAT ? undefined : { display: "none" }}
+        >
           <UploadBox
             files={files}
             setFiles={setFiles}
@@ -629,6 +661,27 @@ function StudyPilot() {
             loading={loading}
           />
         </div>
+
+        {mindMapOpened && currentChatId && (
+          <div
+            className="mindmap-tabpanel"
+            id={viewPanelId(VIEW_MINDMAP)}
+            role="tabpanel"
+            aria-labelledby={viewTabId(VIEW_MINDMAP)}
+            style={
+              activeView === VIEW_MINDMAP ? undefined : { display: "none" }
+            }
+          >
+            <MindMapPanel
+              key={currentChatId}
+              chatId={currentChatId}
+              active={activeView === VIEW_MINDMAP}
+              refreshKey={mindMapRefreshKey}
+              onOpenSource={openCitation}
+              onGoToChat={() => changeView(VIEW_CHAT)}
+            />
+          </div>
+        )}
       </div>
 
       {viewer && (
