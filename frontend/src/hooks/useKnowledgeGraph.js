@@ -21,7 +21,12 @@ const GIVE_UP_CODES = ["not_found", "gone", "invalid"];
 const sameGraph = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 /**
- * Loads a chat's knowledge graph and keeps it fresh.
+ * Loads the knowledge graph of ONE PDF of a chat and keeps it fresh.
+ *
+ * `filename` is the selected document. Without one nothing is requested (the
+ * panel asks the user to pick a document), so graphs of different PDFs are
+ * never combined. A graph is only ever returned for the chat and document it
+ * was loaded for, so switching document never shows the previous one.
  *
  * Nothing is requested unless `active` is true, so the Mind Map costs nothing
  * until its tab is opened, and polling stops when the tab is left.
@@ -37,20 +42,40 @@ const sameGraph = (a, b) => JSON.stringify(a) === JSON.stringify(b);
  */
 export default function useKnowledgeGraph({
   chatId,
+  filename = null,
   active,
   refreshKey = "",
 }) {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
+  const scope = chatId && filename ? `${chatId}\u0000${filename}` : null;
+
+  // What is stored remembers which chat + document it was loaded for, and is
+  // only handed out for that same scope.
+  const [stored, setStored] = useState({ scope: null, data: null, error: null });
+  const data = stored.scope === scope ? stored.data : null;
+  const error = stored.scope === scope ? stored.error : null;
+
   const [indexing, setIndexing] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
   const [regenerating, setRegenerating] = useState(false);
   const [actionError, setActionError] = useState(null);
 
   const dataRef = useRef(null);
+  const scopeRef = useRef(null);
 
   useEffect(() => {
-    if (!active || !chatId) return undefined;
+    if (!active || !scope) return undefined;
+
+    // A different chat or document starts from nothing.
+    if (scopeRef.current !== scope) {
+      scopeRef.current = scope;
+      dataRef.current = null;
+    }
+
+    const merge = (patch) =>
+      setStored((s) => {
+        const base = s.scope === scope ? s : { scope, data: null, error: null };
+        return { ...base, ...patch };
+      });
 
     let cancelled = false;
     let timer = null;
@@ -60,9 +85,16 @@ export default function useKnowledgeGraph({
     const { signal } = controller;
     const startedAt = Date.now();
 
+    // Only the selected PDF's indexing counts, not the chat's other PDFs.
+    const ownJobs = (jobs) => jobs.filter((job) => job?.filename === filename);
+
     const applyGraph = (graph) => {
       dataRef.current = graph;
-      setData((previous) => (sameGraph(previous, graph) ? previous : graph));
+      setStored((s) =>
+        s.scope === scope && sameGraph(s.data, graph)
+          ? s
+          : { scope, data: graph, error: s.scope === scope ? s.error : null }
+      );
     };
 
     const schedule = (action, delay) => {
@@ -85,13 +117,12 @@ export default function useKnowledgeGraph({
 
       if (GIVE_UP_CODES.includes(e.code)) {
         dataRef.current = null;
-        setData(null);
-        setError(e);
+        merge({ data: null, error: e });
         return;
       }
 
       // A graph already on screen is kept; the panel shows a notice.
-      setError(e);
+      merge({ error: e });
 
       if (failures <= MAX_RETRIES) {
         schedule(retry, POLL_INTERVAL_MS * 2 ** failures);
@@ -101,18 +132,18 @@ export default function useKnowledgeGraph({
     async function load() {
       try {
         const [graph, jobs] = await Promise.all([
-          getGraph(chatId, { signal }),
+          getGraph(chatId, { filename, signal }),
           getIndexingJobs(chatId, { signal }),
         ]);
 
         if (cancelled) return;
 
         failures = 0;
-        const indexingNow = isIndexing(jobs);
+        const indexingNow = isIndexing(ownJobs(jobs));
 
         applyGraph(graph);
         setIndexing(indexingNow);
-        setError(null);
+        merge({ error: null });
 
         keepPolling(graph.documents, indexingNow);
       } catch (e) {
@@ -130,13 +161,13 @@ export default function useKnowledgeGraph({
 
       try {
         const [status, jobs] = await Promise.all([
-          getGraphStatus(chatId, { signal }),
+          getGraphStatus(chatId, { filename, signal }),
           getIndexingJobs(chatId, { signal }),
         ]);
 
         if (cancelled) return;
 
-        const indexingNow = isIndexing(jobs);
+        const indexingNow = isIndexing(ownJobs(jobs));
         setIndexing(indexingNow);
 
         const changed =
@@ -149,7 +180,7 @@ export default function useKnowledgeGraph({
         }
 
         failures = 0;
-        setError(null);
+        merge({ error: null });
         keepPolling(status.documents, indexingNow);
       } catch (e) {
         fail(e, tick);
@@ -176,7 +207,7 @@ export default function useKnowledgeGraph({
         onVisibilityChange
       );
     };
-  }, [chatId, active, refreshKey, reloadTick]);
+  }, [chatId, filename, scope, active, refreshKey, reloadTick]);
 
   /** Fetch everything again now (also restarts polling). */
   const refresh = useCallback(() => {

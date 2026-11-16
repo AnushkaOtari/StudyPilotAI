@@ -70,6 +70,29 @@ describe("MindMapCanvas (real React Flow)", () => {
     expect(onSelect).toHaveBeenCalledWith(null);
   });
 
+  it("makes the main topic the prominent centre and colours branches differently", () => {
+    setup();
+
+    const root = screen.getByText("Cell").closest(".concept-node");
+    const other = screen.getByText("Mitochondria").closest(".concept-node");
+
+    expect(root).toHaveAttribute("data-root", "true");
+    expect(other).not.toHaveAttribute("data-root");
+    expect(other).toHaveAttribute("data-depth", "1");
+    expect(Number.parseFloat(root.style.height)).toBeGreaterThan(Number.parseFloat(other.style.height));
+    expect(root.style.getPropertyValue("--branch")).not.toBe(other.style.getPropertyValue("--branch"));
+    // the two first-level branches get different pastel colours
+    expect(other.style.getPropertyValue("--branch")).not.toBe(
+      screen.getByText("Nucleus").closest(".concept-node").style.getPropertyValue("--branch")
+    );
+  });
+
+  it("draws every concept on the minimap", () => {
+    const { container } = setup();
+
+    expect(container.querySelectorAll(".react-flow__minimap-node")).toHaveLength(3);
+  });
+
   it("marks the selected node", () => {
     setup({ selectedId: "a" });
 

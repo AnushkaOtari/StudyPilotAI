@@ -1,6 +1,6 @@
 import { memo } from "react";
-import { BaseEdge, getStraightPath, useInternalNode } from "@xyflow/react";
-import { edgeEndpoints } from "../utils/knowledgeGraph";
+import { BaseEdge, useInternalNode } from "@xyflow/react";
+import { edgeCurve } from "../utils/knowledgeGraph";
 
 const rectOf = (node) => ({
   x: node.internals.positionAbsolute.x,
@@ -9,35 +9,45 @@ const rectOf = (node) => ({
   height: node.measured.height,
 });
 
+const hasSize = (node) => !!node?.measured?.width;
+
 /**
- * A straight edge that runs from border to border instead of centre to
- * centre, so the arrowhead is not hidden underneath the target node.
+ * A curved connector that runs from border to border.
+ *
+ * Branch connectors (`data.tree`) are drawn from the parent to the child as a
+ * smooth S-curve that leaves and arrives along the radial direction. Every
+ * other relationship is a gentle arc.
  */
-function FloatingEdge({ id, source, target, markerEnd, label }) {
+function FloatingEdge({
+  id,
+  source,
+  target,
+  markerStart,
+  markerEnd,
+  label,
+  data,
+}) {
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
+  const originNode = useInternalNode(data?.originId || "");
 
   // Nodes are measured after their first render; draw nothing until then.
-  if (
-    !sourceNode?.measured?.width ||
-    !targetNode?.measured?.width
-  ) {
-    return null;
-  }
+  if (!hasSize(sourceNode) || !hasSize(targetNode)) return null;
 
-  const ends = edgeEndpoints(rectOf(sourceNode), rectOf(targetNode));
+  const tree = !!data?.tree;
+  const fromIsSource = !tree || data.parentId === source;
 
-  const [path, labelX, labelY] = getStraightPath({
-    sourceX: ends.source.x,
-    sourceY: ends.source.y,
-    targetX: ends.target.x,
-    targetY: ends.target.y,
-  });
+  const from = rectOf(fromIsSource ? sourceNode : targetNode);
+  const to = rectOf(fromIsSource ? targetNode : sourceNode);
+  const origin = hasSize(originNode) ? rectOf(originNode) : null;
+
+  const { path, labelX, labelY } = edgeCurve(from, to, { tree, origin });
 
   return (
     <BaseEdge
       id={id}
       path={path}
+      markerStart={markerStart}
       markerEnd={markerEnd}
       label={label}
       labelX={labelX}
@@ -46,6 +56,10 @@ function FloatingEdge({ id, source, target, markerEnd, label }) {
       labelBgPadding={[6, 3]}
       labelBgBorderRadius={6}
       interactionWidth={0}
+      style={{
+        stroke: data?.stroke,
+        strokeWidth: data?.strokeWidth,
+      }}
     />
   );
 }

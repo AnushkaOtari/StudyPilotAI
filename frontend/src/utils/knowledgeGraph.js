@@ -1,4 +1,4 @@
-// Pure helpers for the Mind Map. No React, no d3, no network, so they are
+// Pure helpers for the Mind Map. No React, no network, so they are
 // cheap to test and safe to import from the main bundle.
 
 // The two views of the chat page, and the ids that tie each tab to its panel.
@@ -242,17 +242,54 @@ export function nodeWidth(label) {
 
 export const NODE_HEIGHT = 44;
 
+/** Pastel colour per first-level branch; descendants inherit it. */
+export const BRANCH_COLORS = [
+  "#F9C9A8", // peach
+  "#BFE3D0", // mint
+  "#BCD9F0", // sky
+  "#F5C2D0", // pink
+  "#E3D7F5", // lilac
+  "#F6E3A0", // butter
+  "#B4DDE0", // teal
+  "#D3E4B5", // sage
+];
+export const ROOT_COLOR = "#C9B6EE";
+const CROSS_LINK_COLOR = "#9C9585";
+
+export const branchColor = (branch) =>
+  branch >= 0
+    ? BRANCH_COLORS[branch % BRANCH_COLORS.length]
+    : ROOT_COLOR;
+
+/** A darker shade of a branch colour, for connector lines. */
+const EDGE_COLORS = BRANCH_COLORS.map((c) => shade(c, 0.62));
+
+function shade(hex, factor) {
+  const n = parseInt(hex.slice(1), 16);
+  const part = (shift) =>
+    Math.round(((n >> shift) & 255) * factor)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${part(16)}${part(8)}${part(0)}`;
+}
+
+const TREE_STROKE = [4, 3, 2, 1.6];
+
 /**
  * Backend graph -> React Flow elements.
  *
- * positions: Map<id, {x, y}> from the layout.
+ * layout: { positions: Map<id, {x, y}>, info: Map<id, ...> } from computeLayout.
+ * Relationships that became a parent link in the layout are drawn as branch
+ * connectors; every other relationship is a faint dashed cross-link.
  * When a node is selected, its own connections are highlighted and labelled
- * and everything else is dimmed. With nothing selected, edge labels are
- * hidden to keep a dense graph readable.
+ * (with an arrow in the direction of the relationship) and everything else is
+ * dimmed. With nothing selected, edge labels are hidden.
  */
-export function toFlowElements(graph, positions, selectedId) {
+export function toFlowElements(graph, layout, selectedId) {
   const nodes = graph?.nodes || [];
   const edges = graph?.edges || [];
+  const positions = layout?.positions || new Map();
+  const info = layout?.info || new Map();
 
   const connected = new Set();
   if (selectedId) {
@@ -264,6 +301,7 @@ export function toFlowElements(graph, positions, selectedId) {
   }
 
   const flowNodes = nodes.map((n) => {
+    const meta = info.get(n.id);
     const classes = [`type-${n.type || "concept"}`];
 
     if (selectedId) {
@@ -274,13 +312,21 @@ export function toFlowElements(graph, positions, selectedId) {
       id: n.id,
       type: "concept",
       position: positions.get(n.id) || { x: 0, y: 0 },
+      // Known from the layout. Without them the minimap (which reads the
+      // nodes we pass in, not React Flow's measurements) draws nothing.
+      width: meta?.width ?? nodeWidth(n.label),
+      height: meta?.height ?? NODE_HEIGHT,
       selected: n.id === selectedId,
       ariaLabel: `${n.label}, ${nodeTypeLabel(n.type).toLowerCase()}`,
       className: classes.join(" "),
       data: {
         label: n.label,
         kind: n.type || "concept",
-        width: nodeWidth(n.label),
+        width: meta?.width ?? nodeWidth(n.label),
+        height: meta?.height ?? NODE_HEIGHT,
+        depth: meta?.depth ?? 1,
+        root: !!meta?.root,
+        color: branchColor(meta ? meta.branch : 0),
       },
     };
   });
@@ -289,21 +335,58 @@ export function toFlowElements(graph, positions, selectedId) {
     const active =
       !!selectedId && (e.source === selectedId || e.target === selectedId);
 
+    // The end of this edge that is the child in the layout, if it is a
+    // parent link.
+    const childId = [e.source, e.target].find(
+      (id) => info.get(id)?.parentEdgeId === e.id
+    );
+    const child = childId === undefined ? null : info.get(childId);
+
+    const stroke = active
+      ? "var(--text-main)"
+      : child
+        ? EDGE_COLORS[child.branch % EDGE_COLORS.length]
+        : CROSS_LINK_COLOR;
+
+    const arrow = {
+      type: "arrowclosed",
+      width: 12,
+      height: 12,
+      color: active ? "var(--text-main)" : CROSS_LINK_COLOR,
+    };
+
+    // The curve is always drawn parent -> child; the arrow follows the
+    // direction of the relationship itself.
+    const showArrow = active || !child;
+    const pointsAtChild = !child || e.target === childId;
+
     return {
       id: e.id,
       source: e.source,
       target: e.target,
-      // Custom edge that stops at the node borders so arrowheads stay visible.
       type: "floating",
       focusable: false,
       label: active ? relationshipText(e) : undefined,
-      className: active
-        ? "is-active"
-        : selectedId
-          ? "is-dimmed"
-          : undefined,
-      markerEnd: { type: "arrowclosed", width: 14, height: 14 },
-      data: { relationship: e.relationship },
+      className: [
+        child ? "is-tree" : "is-cross",
+        active ? "is-active" : selectedId ? "is-dimmed" : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      markerEnd: showArrow && pointsAtChild ? arrow : undefined,
+      markerStart: showArrow && !pointsAtChild ? arrow : undefined,
+      data: {
+        relationship: e.relationship,
+        tree: !!child,
+        parentId: child ? child.parentId : null,
+        originId: child ? child.rootId : null,
+        stroke,
+        strokeWidth: active
+          ? 2.5
+          : child
+            ? TREE_STROKE[Math.min(child.depth, TREE_STROKE.length) - 1]
+            : 1.4,
+      },
     };
   });
 
@@ -344,5 +427,61 @@ export function edgeEndpoints(from, to, gap = 2) {
   return {
     source: onBorder(from, centre(to)),
     target: onBorder(to, centre(from)),
+  };
+}
+
+/**
+ * SVG path for an edge between two node boxes (from -> to).
+ *
+ * tree: a cubic S-curve that leaves `from` and arrives at `to` along the
+ *   radial direction (away from `origin`, the centre of the mind map).
+ * otherwise: a quadratic arc bowed to one side.
+ * Returns the path plus the point halfway along it (for a label).
+ */
+export function edgeCurve(from, to, { tree = false, origin = null } = {}) {
+  const centre = (r) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+  const unit = (dx, dy) => {
+    const len = Math.hypot(dx, dy);
+    return len === 0 ? { x: 0, y: 0 } : { x: dx / len, y: dy / len };
+  };
+
+  const { source: s, target: t } = edgeEndpoints(from, to);
+  const dist = Math.hypot(t.x - s.x, t.y - s.y);
+
+  if (tree) {
+    const fromC = centre(from);
+    const toC = centre(to);
+    const o = origin ? centre(origin) : null;
+
+    // Leaving the centre node: head straight for the child.
+    const out =
+      !o || (fromC.x === o.x && fromC.y === o.y)
+        ? unit(toC.x - fromC.x, toC.y - fromC.y)
+        : unit(fromC.x - o.x, fromC.y - o.y);
+    const into = o
+      ? unit(toC.x - o.x, toC.y - o.y)
+      : unit(toC.x - fromC.x, toC.y - fromC.y);
+
+    const k = dist * 0.42;
+    const c1 = { x: s.x + out.x * k, y: s.y + out.y * k };
+    const c2 = { x: t.x - into.x * k, y: t.y - into.y * k };
+
+    return {
+      path: `M ${s.x} ${s.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${t.x} ${t.y}`,
+      labelX: (s.x + 3 * c1.x + 3 * c2.x + t.x) / 8,
+      labelY: (s.y + 3 * c1.y + 3 * c2.y + t.y) / 8,
+    };
+  }
+
+  const bow = unit(-(t.y - s.y), t.x - s.x);
+  const c = {
+    x: (s.x + t.x) / 2 + bow.x * dist * 0.22,
+    y: (s.y + t.y) / 2 + bow.y * dist * 0.22,
+  };
+
+  return {
+    path: `M ${s.x} ${s.y} Q ${c.x} ${c.y}, ${t.x} ${t.y}`,
+    labelX: (s.x + 2 * c.x + t.x) / 4,
+    labelY: (s.y + 2 * c.y + t.y) / 4,
   };
 }

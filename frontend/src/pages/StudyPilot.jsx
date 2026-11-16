@@ -59,6 +59,8 @@ function StudyPilot() {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  // Which chat `uploadedFiles` was fetched for (it lags behind a chat switch).
+  const [uploadedFilesChatId, setUploadedFilesChatId] = useState(null);
 
   // File upload state for multiple PDFs
   const [files, setFiles] = useState([]);
@@ -167,6 +169,15 @@ function StudyPilot() {
 
   const currentChatId = activeConversation?.chat_id;
 
+  // The Mind Map shows ONE document: the one selected in the sidebar, if it
+  // still belongs to this chat. "All Documents" (null) is never merged.
+  // Only trusted once the file list belongs to the current chat, so a chat
+  // switch never pairs this chat with the previous chat's selected PDF.
+  const mindMapFiles =
+    uploadedFilesChatId === currentChatId ? uploadedFiles : [];
+  const mindMapDocument =
+    selectedPdf && mindMapFiles.includes(selectedPdf) ? selectedPdf : null;
+
   // Changes when this chat's PDFs change, so an open Mind Map reloads.
   const mindMapRefreshKey = `${uploadedFiles.join("|")}#${queueJobs
     .map((job) => `${job.filename}:${job.status}`)
@@ -257,6 +268,7 @@ function StudyPilot() {
       });
 
       setUploadedFiles(response.data);
+      setUploadedFilesChatId(chatId);
     } catch (error) {
       console.error("Error fetching uploaded files:", error);
     }
@@ -673,12 +685,15 @@ function StudyPilot() {
             }
           >
             <MindMapPanel
-              key={currentChatId}
+              key={`${currentChatId}|${mindMapDocument ?? ""}`}
               chatId={currentChatId}
+              filename={mindMapDocument}
+              files={mindMapFiles}
               active={activeView === VIEW_MINDMAP}
               refreshKey={mindMapRefreshKey}
               onOpenSource={openCitation}
               onGoToChat={() => changeView(VIEW_CHAT)}
+              onSelectDocument={setSelectedPdf}
             />
           </div>
         )}

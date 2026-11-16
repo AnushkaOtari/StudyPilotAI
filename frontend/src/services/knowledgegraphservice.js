@@ -37,11 +37,16 @@ export function toGraphError(error, fallbackMessage) {
   return wrapped;
 }
 
-/** The merged knowledge graph of a chat, plus the status of each PDF. */
-export async function getGraph(chatId, { signal } = {}) {
+// With `filename` the backend returns only that PDF's graph and status. The
+// Mind Map always sends it: without it the backend merges every PDF of the chat.
+const scopeParams = (chatId, filename) =>
+  filename ? { chat_id: chatId, filename } : { chat_id: chatId };
+
+/** The knowledge graph of one PDF of a chat (or, without `filename`, of all). */
+export async function getGraph(chatId, { filename, signal } = {}) {
   try {
     const response = await api.get("/knowledge-graph", {
-      params: { chat_id: chatId },
+      params: scopeParams(chatId, filename),
       signal,
     });
     return response.data;
@@ -50,11 +55,11 @@ export async function getGraph(chatId, { signal } = {}) {
   }
 }
 
-/** Lightweight per-PDF graph status (used for polling). */
-export async function getGraphStatus(chatId, { signal } = {}) {
+/** Lightweight graph status (used for polling), for one PDF if `filename`. */
+export async function getGraphStatus(chatId, { filename, signal } = {}) {
   try {
     const response = await api.get("/knowledge-graph/status", {
-      params: { chat_id: chatId },
+      params: scopeParams(chatId, filename),
       signal,
     });
     return response.data;

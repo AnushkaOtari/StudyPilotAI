@@ -39,31 +39,34 @@
 
 /* ---------- Concept node ---------- */
 
+/* --branch is the pastel colour of the node's first-level branch. */
 .concept-node {
+  --ink: #2f2a1f;
+  --edge: color-mix(in srgb, var(--branch) 62%, #3a3426);
+
   display: flex;
   align-items: center;
   justify-content: center;
 
-  height: 44px;
-  padding: 4px 10px;
+  box-sizing: border-box;
+  padding: 4px 12px;
 
-  border: 1.5px solid var(--border-color-hover);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  color: var(--text-main);
-  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--edge);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--branch) 55%, #fff);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(60, 50, 20, 0.12);
 
   font-size: var(--font-sm);
   line-height: 1.2;
   text-align: center;
 
   cursor: pointer;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .concept-node:hover {
-  border-color: var(--text-muted);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 3px 10px rgba(60, 50, 20, 0.2);
 }
 
 .concept-node-label {
@@ -74,26 +77,51 @@
   overflow-wrap: anywhere;
 }
 
-.concept-node[data-kind="main_topic"] {
-  background: var(--accent);
-  border-color: var(--accent-hover);
+/* The central topic. */
+.concept-node[data-root="true"] {
+  --edge: #8a70c4;
+
+  background: var(--branch);
+  border-width: 2.5px;
+  border-radius: 24px;
+  box-shadow: 0 4px 14px rgba(110, 85, 175, 0.3);
+
+  font-size: var(--font-h5);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+/* Main branches. */
+.concept-node[data-depth="1"]:not([data-root="true"]) {
+  background: var(--branch);
+  border-radius: 14px;
   font-weight: 700;
 }
 
-.concept-node[data-kind="subtopic"] {
-  background: var(--accent-soft);
-  border-color: var(--accent-hover);
+/* Secondary concepts. */
+.concept-node[data-depth="2"] {
+  background: color-mix(in srgb, var(--branch) 70%, #fff);
   font-weight: 600;
 }
 
-.concept-node[data-kind="example"] {
+/* Everything further out. */
+.concept-node[data-depth="3"] {
+  background: color-mix(in srgb, var(--branch) 38%, #fff);
+  border-width: 1.25px;
+  font-size: var(--font-xs);
+}
+
+/* Examples are pills. */
+.concept-node[data-kind="example"]:not([data-root="true"]) {
+  border-radius: 999px;
   border-style: dashed;
-  background: var(--bg-card-alt);
+  font-style: italic;
+  font-weight: 500;
 }
 
 .react-flow__node.selected .concept-node {
-  border-color: var(--text-main);
-  box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-md);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 12px rgba(60, 50, 20, 0.25);
 }
 
 .react-flow__node:focus-visible {
@@ -101,7 +129,7 @@
 }
 
 .react-flow__node:focus-visible .concept-node {
-  outline: 2px solid var(--text-main);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 
@@ -127,17 +155,27 @@
 
 /* ---------- Edges ---------- */
 
+.react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+/* Cross-links between branches: present, but quiet. */
+.react-flow__edge.is-cross .react-flow__edge-path {
+  stroke-dasharray: 5 6;
+  opacity: 0.75;
+}
+
 .react-flow__edge.is-dimmed .react-flow__edge-path {
-  opacity: 0.18;
+  opacity: 0.15;
 }
 
 .react-flow__edge.is-active .react-flow__edge-path {
-  stroke: var(--text-main);
-  stroke-width: 2.25;
+  opacity: 1;
+  stroke-dasharray: none;
 }
 
 .react-flow__edge-textbg {
-  fill: var(--accent-soft);
+  fill: #fff;
   stroke: var(--border-color);
 }
 

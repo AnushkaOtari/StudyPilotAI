@@ -19,7 +19,7 @@ import ConceptDetails from "./ConceptDetails";
 import MindMapErrorBoundary from "./MindMapErrorBoundary";
 import "./MindMapPanel.css";
 
-// React Flow and d3-force are only downloaded when a graph is first shown.
+// React Flow is only downloaded when a graph is first shown.
 const MindMapCanvas = lazy(() => import("./MindMapCanvas"));
 
 const ERROR_TEXT = {
@@ -97,23 +97,39 @@ function DocumentStatusList({ documents, indexing }) {
 }
 
 /**
- * The Mind Map tab: loads and refreshes the chat's knowledge graph, shows
- * the right state for every situation, and the graph with a details panel.
- * Requests are only made while `active` is true.
+ * The Mind Map tab: loads and refreshes the knowledge graph of the SELECTED
+ * PDF, shows the right state for every situation, and the graph with a
+ * details panel. Requests are only made while `active` is true.
  *
- * Render with `key={chatId}` so each chat starts from a clean state.
+ * `filename` is the selected document. With none selected ("All Documents")
+ * no graph is requested or shown: the PDFs are never merged into one graph;
+ * the user is asked to pick one from `files` instead.
+ *
+ * Render with `key` = chat + document so each starts from a clean state.
  */
 function MindMapPanel({
   chatId,
+  filename = null,
+  files = [],
   active,
   refreshKey,
   onOpenSource,
   onGoToChat,
+  onSelectDocument,
 }) {
-  const knowledge = useKnowledgeGraph({ chatId, active, refreshKey });
+  const knowledge = useKnowledgeGraph({ chatId, filename, active, refreshKey });
   const { data, error, indexing, regenerating, actionError } = knowledge;
 
-  const view = deriveView({ data, error, indexing });
+  // No document chosen: nothing to load, and nothing is combined.
+  const needsDocument = !filename;
+  const view = needsDocument
+    ? {
+        kind: files.length > 0 ? "select_document" : "empty",
+        busy: false,
+        failedDocs: [],
+        notStartedDocs: [],
+      }
+    : deriveView({ data, error, indexing });
 
   const [selectedId, setSelectedId] = useState(null);
   const [focusTick, setFocusTick] = useState(0);
@@ -146,6 +162,12 @@ function MindMapPanel({
       <div className="mindmap-toolbar">
         <div className="mindmap-title">
           <h2>Mind Map</h2>
+          {filename && (
+            <span className="mindmap-doc-title" title={filename}>
+              <FileText size={13} aria-hidden="true" />
+              <span>{filename}</span>
+            </span>
+          )}
           {showGraph && stats && (
             <span className="mindmap-stats">
               {stats.node_count}{" "}
@@ -288,6 +310,34 @@ function MindMapPanel({
                 Go to Chat
               </button>
             )}
+          </StateCard>
+        )}
+
+        {view.kind === "select_document" && (
+          <StateCard
+            tone="neutral"
+            icon={<FileText size={26} aria-hidden="true" />}
+            title="Select a document"
+          >
+            <p>
+              A mind map shows one PDF at a time. Choose a document to
+              see its key concepts and how they connect.
+            </p>
+            <ul className="mindmap-doc-list">
+              {files.map((name) => (
+                <li key={name} className="mindmap-doc">
+                  <button
+                    type="button"
+                    className="mindmap-doc-pick"
+                    onClick={() => onSelectDocument?.(name)}
+                    title={name}
+                  >
+                    <FileText size={14} aria-hidden="true" />
+                    <span>{name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </StateCard>
         )}
 

@@ -1,5 +1,6 @@
 import os
 import re
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -156,9 +157,29 @@ def _overall_status(documents):
     return STATUS_NOT_STARTED
 
 
-def _chat_documents(user_id, chat_id, folder):
-    """(document statuses, records with a graph) for PDFs still in the chat."""
-    present = _pdfs_in(folder)
+def _scoped_filename(folder, filename):
+    """Validate an optional `filename` scope; None means the whole chat."""
+    if filename is None:
+        return None
+
+    _validate_filename(filename)
+
+    if filename not in _pdfs_in(folder):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="PDF not found in this chat."
+        )
+
+    return filename
+
+
+def _chat_documents(user_id, chat_id, folder, only=None):
+    """(document statuses, records with a graph) for PDFs still in the chat.
+
+    `only` restricts everything to that one PDF, so no other document of the
+    chat can contribute a status, a node or an edge.
+    """
+    present = [only] if only else _pdfs_in(folder)
     records = {r["filename"]: r for r in store.list_docs(user_id, chat_id)}
 
     documents = [
@@ -181,12 +202,19 @@ def _chat_documents(user_id, chat_id, folder):
 @router.get("", response_model=KnowledgeGraphResponse)
 def get_chat_graph(
     chat_id: str,
+    filename: Optional[str] = None,
     current_user: User = Depends(get_current_user),
 ):
+    """The graph of a chat.
+
+    With `filename`, only that PDF's own graph (and status) is returned; the
+    Mind Map always sends it. Without it, the PDFs of the chat are merged.
+    """
     folder = _chat_upload_folder(current_user.id, chat_id)
+    only = _scoped_filename(folder, filename)
 
     documents, with_graph = _chat_documents(
-        current_user.id, chat_id, folder
+        current_user.id, chat_id, folder, only=only
     )
 
     nodes, edges = kg_service.merge_documents(with_graph)
@@ -208,11 +236,15 @@ def get_chat_graph(
 @router.get("/status", response_model=GraphStatusResponse)
 def get_graph_status(
     chat_id: str,
+    filename: Optional[str] = None,
     current_user: User = Depends(get_current_user),
 ):
     folder = _chat_upload_folder(current_user.id, chat_id)
+    only = _scoped_filename(folder, filename)
 
-    documents, _ = _chat_documents(current_user.id, chat_id, folder)
+    documents, _ = _chat_documents(
+        current_user.id, chat_id, folder, only=only
+    )
 
     return {
         "chat_id": chat_id,

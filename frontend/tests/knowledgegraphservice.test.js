@@ -34,6 +34,27 @@ describe("knowledge graph service", () => {
     });
   });
 
+  it("getGraph and getGraphStatus scope the request to one PDF when given a filename", async () => {
+    apiMock.get.mockResolvedValue({ data: {} });
+
+    await getGraph("chat-1", { filename: "Bio & Notes (1).pdf" });
+    await getGraphStatus("chat-1", { filename: "Bio & Notes (1).pdf" });
+
+    // sent as a query parameter (axios encodes it), never merged into the URL
+    expect(apiMock.get.mock.calls[0][0]).toBe("/knowledge-graph");
+    expect(apiMock.get.mock.calls[0][1].params).toEqual({ chat_id: "chat-1", filename: "Bio & Notes (1).pdf" });
+    expect(apiMock.get.mock.calls[1][0]).toBe("/knowledge-graph/status");
+    expect(apiMock.get.mock.calls[1][1].params).toEqual({ chat_id: "chat-1", filename: "Bio & Notes (1).pdf" });
+  });
+
+  it("sends no filename parameter at all when none is given", async () => {
+    apiMock.get.mockResolvedValue({ data: {} });
+
+    await getGraph("chat-1");
+
+    expect(apiMock.get.mock.calls[0][1].params).toEqual({ chat_id: "chat-1" });
+  });
+
   it("getGraphStatus calls the status endpoint", async () => {
     apiMock.get.mockResolvedValueOnce({ data: { status: "COMPLETED", documents: [] } });
 

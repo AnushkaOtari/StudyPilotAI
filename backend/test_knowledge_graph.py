@@ -993,3 +993,139 @@ class TestRecovery:
 
         monkeypatch.setattr(env.store, "iter_all_docs", boom)
         assert env.wm.recover_interrupted_jobs() == {"requeued": 0, "failed": 0, "dropped": 0}
+
+
+# ======================================================================
+# 12. Document scope: a selected PDF's graph never contains another PDF
+# ======================================================================
+class TestDocumentScope:
+    """GET /knowledge-graph and /status accept `filename`. Cells.pdf and
+    Bio.pdf both mention "Cell" (different pages and wording), so any leak
+    between the two documents shows up as a wrong source or description."""
+
+    @pytest.fixture()
+    def two(self, env):
+        env.kg_upload("c1", "Cells.pdf", CELLS)
+        env.kg_upload("c1", "Bio.pdf", BIOLOGY)
+        return env
+
+    @staticmethod
+    def labels(body):
+        return {n["label"] for n in body["nodes"]}
+
+    @staticmethod
+    def documents_of(body):
+        return {s["document"] for n in body["nodes"] for s in n["sources"]}
+
+    def test_first_pdf_returns_only_its_concepts(self, two):
+        body = two.get("", "c1", filename="Cells.pdf").json()
+        assert self.labels(body) == {"Cell", "Mitochondria"}
+        assert self.documents_of(body) == {"Cells.pdf"}
+        assert [d["filename"] for d in body["documents"]] == ["Cells.pdf"]
+        assert body["stats"] == {"node_count": 2, "edge_count": 1, "document_count": 1}
+
+    def test_second_pdf_returns_only_its_concepts(self, two):
+        body = two.get("", "c1", filename="Bio.pdf").json()
+        assert self.labels(body) == {"Photosynthesis", "Chlorophyll", "Cell"}
+        assert self.documents_of(body) == {"Bio.pdf"}
+        assert [d["filename"] for d in body["documents"]] == ["Bio.pdf"]
+        assert body["stats"]["document_count"] == 1
+
+    def test_switching_between_pdfs_always_gives_the_selected_one(self, two):
+        for name, expected in [("Cells.pdf", {"Cell", "Mitochondria"}),
+                               ("Bio.pdf", {"Photosynthesis", "Chlorophyll", "Cell"}),
+                               ("Cells.pdf", {"Cell", "Mitochondria"}),
+                               ("Bio.pdf", {"Photosynthesis", "Chlorophyll", "Cell"})]:
+            body = two.get("", "c1", filename=name).json()
+            assert self.labels(body) == expected
+            assert self.documents_of(body) == {name}
+
+    def test_a_concept_in_both_pdfs_keeps_only_the_selected_pdfs_details(self, two):
+        cells = {n["label"]: n for n in two.get("", "c1", filename="Cells.pdf").json()["nodes"]}
+        bio = {n["label"]: n for n in two.get("", "c1", filename="Bio.pdf").json()["nodes"]}
+
+        assert cells["Cell"]["description"] == "Basic unit of life."
+        assert "smallest living unit" in bio["Cell"]["description"]
+        assert [s["document"] for s in cells["Cell"]["sources"]] == ["Cells.pdf"]
+        assert [s["document"] for s in bio["Cell"]["sources"]] == ["Bio.pdf"]
+
+    def test_source_pages_belong_to_the_selected_pdf(self, two):
+        cells = {n["label"]: n for n in two.get("", "c1", filename="Cells.pdf").json()["nodes"]}
+        bio = {n["label"]: n for n in two.get("", "c1", filename="Bio.pdf").json()["nodes"]}
+
+        assert cells["Cell"]["sources"][0]["pages"] == [1]
+        assert bio["Cell"]["sources"][0]["pages"] == [2]
+        assert bio["Chlorophyll"]["sources"][0]["pages"] == [2]
+
+    def test_edges_only_connect_concepts_of_the_selected_pdf(self, two):
+        for name in ("Cells.pdf", "Bio.pdf"):
+            body = two.get("", "c1", filename=name).json()
+            ids = {n["id"] for n in body["nodes"]}
+            assert body["edges"]
+            assert all(e["source"] in ids and e["target"] in ids for e in body["edges"])
+            assert all(e["documents"] == [name] for e in body["edges"])
+
+    def test_without_a_filename_the_chat_is_still_merged(self, two):
+        # The chat-level view is unchanged for other clients; the Mind Map
+        # never uses it (it always sends the selected PDF).
+        body = two.get("", "c1").json()
+        assert len(body["nodes"]) == 4 and body["stats"]["document_count"] == 2
+
+    def test_scoped_status_reports_only_that_pdf(self, two):
+        body = two.get("/status", "c1", filename="Bio.pdf").json()
+        assert [d["filename"] for d in body["documents"]] == ["Bio.pdf"]
+        assert body["status"] == "COMPLETED"
+
+    def test_a_pdf_without_a_graph_does_not_borrow_another_pdfs(self, env, monkeypatch):
+        env.kg_upload("c1", "Cells.pdf", CELLS)
+        monkeypatch.setenv("KNOWLEDGE_GRAPH_AUTO_GENERATE", "0")
+        env.kg_upload("c1", "Bio.pdf", BIOLOGY)
+
+        bio = env.get("", "c1", filename="Bio.pdf").json()
+        assert bio["nodes"] == [] and bio["edges"] == []
+        assert bio["status"] == "NOT_STARTED"
+        assert bio["documents"][0]["status"] == "NOT_STARTED"
+
+        cells = env.get("", "c1", filename="Cells.pdf").json()
+        assert self.labels(cells) == {"Cell", "Mitochondria"}
+
+    def test_cached_graphs_are_stored_per_document(self, two):
+        a = two.store.read_doc(1, "c1", "Cells.pdf")
+        b = two.store.read_doc(1, "c1", "Bio.pdf")
+        assert two.store.doc_id("Cells.pdf") != two.store.doc_id("Bio.pdf")
+        assert {n["label"] for n in a["nodes"]} == {"Cell", "Mitochondria"}
+        assert {n["label"] for n in b["nodes"]} == {"Photosynthesis", "Chlorophyll", "Cell"}
+
+    def test_regenerating_one_pdf_leaves_the_other_untouched(self, two):
+        before = two.get("", "c1", filename="Cells.pdf").json()
+        assert two.client.post("/knowledge-graph/documents/Bio.pdf/regenerate",
+                               params={"chat_id": "c1"}).status_code == 202
+        assert two.worker.wait_idle(10)
+        assert two.get("", "c1", filename="Cells.pdf").json() == before
+
+    def test_deleting_one_pdf_leaves_the_other_pdfs_graph(self, two):
+        two.login(1)
+        assert two.client.delete("/knowledge-graph/documents/Bio.pdf",
+                                 params={"chat_id": "c1"}).status_code == 200
+        assert self.labels(two.get("", "c1", filename="Cells.pdf").json()) == {"Cell", "Mitochondria"}
+
+    def test_the_same_pdf_name_in_two_chats_is_not_shared(self, env):
+        env.kg_upload("c1", "Cells.pdf", CELLS)
+        env.kg_upload("c2", "Cells.pdf", CELLS_V2)
+        assert len(env.calls) == 2   # generated separately, never reused across chats
+        assert os.path.isdir("knowledge_graphs/user_1/chat_c1/docs")
+        assert os.path.isdir("knowledge_graphs/user_1/chat_c2/docs")
+        env.login(1)
+        assert env.client.delete("/knowledge-graph", params={"chat_id": "c1"}).status_code == 200
+        assert env.get("", "c2", filename="Cells.pdf").json()["nodes"]   # c2 unaffected
+
+    def test_scope_errors(self, two):
+        assert two.get("", "c1", filename="Nope.pdf").status_code == 404
+        assert two.get("/status", "c1", filename="Nope.pdf").status_code == 404
+        assert two.get("", "c1", filename="notes.txt").status_code == 400
+        assert two.get("", "c1", filename="").status_code == 400          # never "merge everything"
+        assert two.get("", "c1", filename="../Bio.pdf").status_code == 400
+        assert two.get("", "c1", filename="Bio.pdf", ).status_code == 200
+
+    def test_another_user_cannot_scope_into_a_pdf(self, two):
+        assert two.get("", "c1", user_id=2, filename="Bio.pdf").status_code == 404

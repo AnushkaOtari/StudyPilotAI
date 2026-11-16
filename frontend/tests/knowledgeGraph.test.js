@@ -1,9 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
+  BRANCH_COLORS,
+  ROOT_COLOR,
+  branchColor,
   compressPages,
   deriveView,
   documentStatusText,
   documentsInGraph,
+  edgeCurve,
   edgeEndpoints,
   getNeighbors,
   graphSignature,
@@ -264,36 +268,82 @@ describe("misc helpers", () => {
 });
 
 describe("toFlowElements", () => {
-  const positions = new Map([
-    ["a", { x: 10, y: 20 }],
-    ["b", { x: 30, y: 40 }],
-  ]);
+  const layout = {
+    positions: new Map([
+      ["a", { x: 10, y: 20 }],
+      ["b", { x: 30, y: 40 }],
+    ]),
+    info: new Map([
+      ["a", { root: true, rootId: "a", depth: 0, branch: -1, parentId: null, parentEdgeId: null, width: 160, height: 64 }],
+      ["b", { root: false, rootId: "a", depth: 1, branch: 2, parentId: "a", parentEdgeId: "e1", width: 100, height: 44 }],
+    ]),
+  };
 
-  it("maps every node and edge, using layout positions (default 0,0)", () => {
-    const { nodes, edges } = toFlowElements(graph, positions, null);
+  it("maps every node and edge, using layout positions and sizes (default 0,0)", () => {
+    const { nodes, edges } = toFlowElements(graph, layout, null);
 
     expect(nodes).toHaveLength(4);
     expect(edges).toHaveLength(2);
     expect(nodes.find((n) => n.id === "a")).toMatchObject({
       type: "concept",
       position: { x: 10, y: 20 },
+      width: 160,
+      height: 64,
       selected: false,
-      data: { label: "Cell", kind: "concept" },
+      data: { label: "Cell", kind: "concept", root: true, depth: 0, width: 160, height: 64 },
     });
     expect(nodes.find((n) => n.id === "d").position).toEqual({ x: 0, y: 0 });
     expect(edges[0]).toMatchObject({ id: "e1", source: "b", target: "a", type: "floating" });
     expect(nodes.find((n) => n.id === "a").ariaLabel).toBe("Cell, concept");
   });
 
+  it("gives every node an explicit size (the minimap needs it) even without a layout", () => {
+    const { nodes } = toFlowElements(graph, null, null);
+
+    for (const n of nodes) {
+      expect(n.width).toBeGreaterThan(0);
+      expect(n.height).toBeGreaterThan(0);
+    }
+  });
+
+  it("colours a node by its branch, and the centre with the root colour", () => {
+    const { nodes } = toFlowElements(graph, layout, null);
+
+    expect(nodes.find((n) => n.id === "a").data.color).toBe(ROOT_COLOR);
+    expect(nodes.find((n) => n.id === "b").data.color).toBe(BRANCH_COLORS[2]);
+  });
+
+  it("draws the layout's parent link as a branch connector and the rest as cross-links", () => {
+    const { edges } = toFlowElements(graph, layout, null);
+    const e1 = edges.find((e) => e.id === "e1");
+    const e2 = edges.find((e) => e.id === "e2");
+
+    expect(e1.className).toBe("is-tree");
+    expect(e1.data).toMatchObject({ tree: true, parentId: "a", originId: "a" });
+    expect(e2.className).toBe("is-cross");
+    expect(e2.data.tree).toBe(false);
+    expect(e1.data.strokeWidth).toBeGreaterThan(e2.data.strokeWidth);
+  });
+
+  it("branch connectors have no arrowhead; cross-links do", () => {
+    const { edges } = toFlowElements(graph, layout, null);
+
+    const e1 = edges.find((e) => e.id === "e1");
+    const e2 = edges.find((e) => e.id === "e2");
+    expect(e1.markerEnd).toBeUndefined();
+    expect(e1.markerStart).toBeUndefined();
+    expect(e2.markerEnd || e2.markerStart).toBeTruthy();
+  });
+
   it("with nothing selected: no dimming and no edge labels", () => {
-    const { nodes, edges } = toFlowElements(graph, positions, null);
+    const { nodes, edges } = toFlowElements(graph, layout, null);
 
     expect(nodes.every((n) => !n.className.includes("is-dimmed"))).toBe(true);
-    expect(edges.every((e) => e.label === undefined && e.className === undefined)).toBe(true);
+    expect(edges.every((e) => e.label === undefined && !e.className.includes("is-dimmed"))).toBe(true);
   });
 
   it("with a selection: marks it, highlights and labels its edges, dims the rest", () => {
-    const { nodes, edges } = toFlowElements(graph, positions, "b");
+    const { nodes, edges } = toFlowElements(graph, layout, "b");
     const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
 
     expect(byId.b.selected).toBe(true);
@@ -304,12 +354,73 @@ describe("toFlowElements", () => {
 
     const e1 = edges.find((e) => e.id === "e1");
     const e2 = edges.find((e) => e.id === "e2");
-    expect(e1).toMatchObject({ label: "is part of", className: "is-active" });
-    expect(e2).toMatchObject({ label: undefined, className: "is-dimmed" });
+    expect(e1.label).toBe("is part of");
+    expect(e1.className).toContain("is-active");
+    expect(e1.markerEnd || e1.markerStart).toBeTruthy(); // direction shown for the selection
+    expect(e2.label).toBeUndefined();
+    expect(e2.className).toContain("is-dimmed");
   });
 
   it("copes with an empty or missing graph", () => {
-    expect(toFlowElements(null, new Map(), null)).toEqual({ nodes: [], edges: [] });
+    expect(toFlowElements(null, null, null)).toEqual({ nodes: [], edges: [] });
+  });
+});
+
+describe("branchColor", () => {
+  it("is the root colour for the centre (-1)", () => {
+    expect(branchColor(-1)).toBe(ROOT_COLOR);
+  });
+
+  it("gives neighbouring branches different pastel colours and wraps round", () => {
+    expect(branchColor(0)).not.toBe(branchColor(1));
+    expect(branchColor(BRANCH_COLORS.length)).toBe(branchColor(0));
+    expect(BRANCH_COLORS.every((c) => /^#[0-9a-f]{6}$/i.test(c))).toBe(true);
+  });
+});
+
+describe("edgeCurve", () => {
+  const box = (x, y, width = 100, height = 40) => ({ x, y, width, height });
+  const centre = box(-80, -20, 160, 40);
+
+  const numbers = (path) => path.match(/-?\d+(\.\d+)?/g).map(Number);
+
+  it("draws a cubic S-curve for a branch connector, from border to border", () => {
+    const child = box(300, -20);
+    const { path } = edgeCurve(centre, child, { tree: true, origin: centre });
+
+    expect(path.startsWith("M ")).toBe(true);
+    expect(path).toContain(" C ");
+    const [sx, sy, , , , , tx, ty] = numbers(path);
+    expect(sx).toBeCloseTo(82, 0); // right border of the centre box (+2 gap)
+    expect(sy).toBeCloseTo(0, 0);
+    expect(tx).toBeCloseTo(298, 0); // left border of the child
+    expect(ty).toBeCloseTo(0, 0);
+  });
+
+  it("curves: the control points are not on the straight line for an off-axis child", () => {
+    const parent = box(300, -20);
+    const child = box(500, 200);
+    const { path } = edgeCurve(parent, child, { tree: true, origin: centre });
+    const [sx, sy, c1x, c1y, c2x, c2y, tx, ty] = numbers(path);
+
+    const cross = (px, py) =>
+      Math.abs((tx - sx) * (sy - py) - (sx - px) * (ty - sy)) / Math.hypot(tx - sx, ty - sy);
+    expect(cross(c1x, c1y) + cross(c2x, c2y)).toBeGreaterThan(5);
+  });
+
+  it("draws a cross-link as a quadratic arc and gives a label point", () => {
+    const { path, labelX, labelY } = edgeCurve(box(0, 0), box(300, 200));
+
+    expect(path).toContain(" Q ");
+    expect(Number.isFinite(labelX)).toBe(true);
+    expect(Number.isFinite(labelY)).toBe(true);
+  });
+
+  it("never produces NaN for boxes at the same spot", () => {
+    for (const opts of [{}, { tree: true, origin: null }, { tree: true, origin: centre }]) {
+      const { path } = edgeCurve(box(0, 0), box(0, 0), opts);
+      expect(path).not.toContain("NaN");
+    }
   });
 });
 

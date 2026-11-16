@@ -11,7 +11,9 @@ function ConceptNode({ data }) {
     <div
       className="concept-node"
       data-kind={data.kind}
-      style={{ width: data.width }}
+      data-depth={Math.min(data.depth, 3)}
+      data-root={data.root ? "true" : undefined}
+      style={{ width: data.width, height: data.height, "--branch": data.color }}
       title={data.label}
     >
       <Handle

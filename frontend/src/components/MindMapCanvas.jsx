@@ -12,12 +12,7 @@ import "@xyflow/react/dist/style.css";
 import ConceptNode from "./ConceptNode";
 import FloatingEdge from "./FloatingEdge";
 import { computeLayout } from "../utils/graphLayout";
-import {
-  NODE_HEIGHT,
-  graphSignature,
-  nodeWidth,
-  toFlowElements,
-} from "../utils/knowledgeGraph";
+import { graphSignature, toFlowElements } from "../utils/knowledgeGraph";
 
 import "./MindMapCanvas.css";
 
@@ -25,13 +20,7 @@ import "./MindMapCanvas.css";
 const nodeTypes = { concept: ConceptNode };
 const edgeTypes = { floating: FloatingEdge };
 
-const MINIMAP_COLORS = {
-  main_topic: "#F2DA76",
-  subtopic: "#FFF4C7",
-  example: "#E9E4D5",
-};
-
-const miniMapColor = (node) => MINIMAP_COLORS[node.data?.kind] || "#D8D2C2";
+const miniMapColor = (node) => node.data?.color || "#D8D2C2";
 
 function Canvas({ graph, selectedId, focusTick, onSelect }) {
   const reactFlow = useReactFlow();
@@ -39,14 +28,14 @@ function Canvas({ graph, selectedId, focusTick, onSelect }) {
 
   // `graph` keeps the same identity until its content changes, so the
   // layout is computed once per real change (never on a plain re-poll).
-  const positions = useMemo(
+  const layout = useMemo(
     () => computeLayout(graph.nodes, graph.edges),
     [graph]
   );
 
   const { nodes, edges } = useMemo(
-    () => toFlowElements(graph, positions, selectedId),
-    [graph, positions, selectedId]
+    () => toFlowElements(graph, layout, selectedId),
+    [graph, layout, selectedId]
   );
 
   // Selecting a concept from the details list brings it into view. Clicking
@@ -55,15 +44,16 @@ function Canvas({ graph, selectedId, focusTick, onSelect }) {
     if (!focusTick || focusTick === handledFocus.current) return;
     handledFocus.current = focusTick;
 
-    const position = positions.get(selectedId);
-    if (!position) return;
+    const position = layout.positions.get(selectedId);
+    const size = layout.info.get(selectedId);
+    if (!position || !size) return;
 
     reactFlow.setCenter(
-      position.x + nodeWidth(findLabel(graph, selectedId)) / 2,
-      position.y + NODE_HEIGHT / 2,
+      position.x + size.width / 2,
+      position.y + size.height / 2,
       { zoom: Math.max(reactFlow.getZoom(), 1), duration: 400 }
     );
-  }, [focusTick, selectedId, positions, graph, reactFlow]);
+  }, [focusTick, selectedId, layout, reactFlow]);
 
   return (
     <ReactFlow
@@ -99,13 +89,9 @@ function Canvas({ graph, selectedId, focusTick, onSelect }) {
   );
 }
 
-function findLabel(graph, id) {
-  return graph.nodes.find((n) => n.id === id)?.label || "";
-}
-
 /**
- * The interactive graph. Loaded lazily (see MindMapPanel) so React Flow and
- * d3-force only download when the Mind Map tab is first opened.
+ * The interactive graph. Loaded lazily (see MindMapPanel) so React Flow
+ * only downloads when the Mind Map tab is first opened.
  */
 function MindMapCanvas(props) {
   return (

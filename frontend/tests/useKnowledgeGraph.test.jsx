@@ -47,7 +47,7 @@ const advance = (ms) => act(async () => { await vi.advanceTimersByTimeAsync(ms);
 
 const mount = (props = {}) =>
   renderHook((p) => useKnowledgeGraph(p), {
-    initialProps: { chatId: "c1", active: true, refreshKey: "", ...props },
+    initialProps: { chatId: "c1", filename: "A.pdf", active: true, refreshKey: "", ...props },
   });
 
 beforeEach(() => {
@@ -99,7 +99,7 @@ describe("useKnowledgeGraph: loading", () => {
     await flush();
     expect(svc.getGraph).not.toHaveBeenCalled();
 
-    rerender({ chatId: "c1", active: true, refreshKey: "" });
+    rerender({ chatId: "c1", filename: "A.pdf", active: true, refreshKey: "" });
     await flush();
     expect(svc.getGraph).toHaveBeenCalledTimes(1);
   });
@@ -109,7 +109,7 @@ describe("useKnowledgeGraph: loading", () => {
     const { rerender } = mount({ refreshKey: "a.pdf" });
     await flush();
 
-    rerender({ chatId: "c1", active: true, refreshKey: "a.pdf|b.pdf" });
+    rerender({ chatId: "c1", filename: "A.pdf", active: true, refreshKey: "a.pdf|b.pdf" });
     await flush();
 
     expect(svc.getGraph).toHaveBeenCalledTimes(2);
@@ -192,7 +192,7 @@ describe("useKnowledgeGraph: polling", () => {
 
   it("polls while a PDF is still being indexed, even before any graph job exists", async () => {
     svc.getGraph.mockResolvedValue(graphOf([doc("a.pdf", "NOT_STARTED")]));
-    svc.getIndexingJobs.mockResolvedValue([{ filename: "a.pdf", status: "WAITING" }]);
+    svc.getIndexingJobs.mockResolvedValue([{ filename: "A.pdf", status: "WAITING" }]);
     svc.getGraphStatus.mockResolvedValue({ documents: [doc("a.pdf", "NOT_STARTED")] });
 
     const { result } = mount();
@@ -203,7 +203,7 @@ describe("useKnowledgeGraph: polling", () => {
     expect(svc.getGraphStatus).toHaveBeenCalledTimes(1);
 
     // indexing finishes and the graph job starts
-    svc.getIndexingJobs.mockResolvedValue([{ filename: "a.pdf", status: "COMPLETED" }]);
+    svc.getIndexingJobs.mockResolvedValue([{ filename: "A.pdf", status: "COMPLETED" }]);
     svc.getGraphStatus.mockResolvedValue({ documents: [doc("a.pdf", "PENDING")] });
     svc.getGraph.mockResolvedValue(graphOf([doc("a.pdf", "PENDING")]));
     await advance(POLL_INTERVAL_MS);
@@ -235,11 +235,11 @@ describe("useKnowledgeGraph: polling", () => {
     const { rerender } = mount();
     await flush();
 
-    rerender({ chatId: "c1", active: false, refreshKey: "" });
+    rerender({ chatId: "c1", filename: "A.pdf", active: false, refreshKey: "" });
     await advance(POLL_INTERVAL_MS * 4);
     expect(svc.getGraphStatus).not.toHaveBeenCalled();
 
-    rerender({ chatId: "c1", active: true, refreshKey: "" });
+    rerender({ chatId: "c1", filename: "A.pdf", active: true, refreshKey: "" });
     await flush();
     expect(svc.getGraph).toHaveBeenCalledTimes(2); // a full reload on return
   });
@@ -412,5 +412,112 @@ describe("useKnowledgeGraph: regenerate", () => {
 
     act(() => result.current.dismissActionError());
     expect(result.current.actionError).toBeNull();
+  });
+});
+
+describe("useKnowledgeGraph: one document at a time", () => {
+  const graphFor = (name, label) => graphOf([doc(name, "COMPLETED", { node_count: 1 })], [{ id: label, label, sources: [] }]);
+
+  it("asks the backend for the selected document only (graph and status polling)", async () => {
+    svc.getGraph.mockResolvedValue(graphOf([doc("A.pdf", "PROCESSING")]));
+    svc.getGraphStatus.mockResolvedValue({ documents: [doc("A.pdf", "PROCESSING")] });
+    mount({ filename: "A.pdf" });
+    await flush();
+    await advance(POLL_INTERVAL_MS);
+
+    expect(svc.getGraph).toHaveBeenCalledWith("c1", expect.objectContaining({ filename: "A.pdf" }));
+    expect(svc.getGraphStatus).toHaveBeenCalledWith("c1", expect.objectContaining({ filename: "A.pdf" }));
+  });
+
+  it("with no document selected ('All Documents') requests nothing and returns no graph", async () => {
+    const { result } = mount({ filename: null });
+    await advance(POLL_INTERVAL_MS * 3);
+
+    expect(svc.getGraph).not.toHaveBeenCalled();
+    expect(svc.getGraphStatus).not.toHaveBeenCalled();
+    expect(svc.getIndexingJobs).not.toHaveBeenCalled();
+    expect(result.current.data).toBeNull();
+  });
+
+  it("switching document loads that document and never shows the previous graph meanwhile", async () => {
+    let resolveB;
+    svc.getGraph.mockImplementation((chat, { filename }) =>
+      filename === "A.pdf"
+        ? Promise.resolve(graphFor("A.pdf", "Concept of A"))
+        : new Promise((r) => { resolveB = () => r(graphFor("B.pdf", "Concept of B")); })
+    );
+
+    const { result, rerender } = mount({ filename: "A.pdf" });
+    await flush();
+    expect(result.current.data.nodes[0].label).toBe("Concept of A");
+
+    rerender({ chatId: "c1", filename: "B.pdf", active: true, refreshKey: "" });
+    expect(result.current.data).toBeNull(); // not A's graph while B loads
+    await flush();
+    expect(result.current.data).toBeNull();
+
+    await act(async () => resolveB());
+    expect(result.current.data.nodes[0].label).toBe("Concept of B");
+    expect(svc.getGraph).toHaveBeenLastCalledWith("c1", expect.objectContaining({ filename: "B.pdf" }));
+  });
+
+  it("switching back reloads the first document", async () => {
+    svc.getGraph.mockImplementation((chat, { filename }) =>
+      Promise.resolve(graphFor(filename, `Concept of ${filename}`))
+    );
+    const { result, rerender } = mount({ filename: "A.pdf" });
+    await flush();
+
+    rerender({ chatId: "c1", filename: "B.pdf", active: true, refreshKey: "" });
+    await flush();
+    expect(result.current.data.nodes[0].label).toBe("Concept of B.pdf");
+
+    rerender({ chatId: "c1", filename: "A.pdf", active: true, refreshKey: "" });
+    await flush();
+    expect(result.current.data.nodes[0].label).toBe("Concept of A.pdf");
+  });
+
+  it("a slow response for the previous document cannot replace the new one", async () => {
+    let resolveA;
+    svc.getGraph.mockImplementation((chat, { filename }) =>
+      filename === "A.pdf"
+        ? new Promise((r) => { resolveA = () => r(graphFor("A.pdf", "Concept of A")); })
+        : Promise.resolve(graphFor("B.pdf", "Concept of B"))
+    );
+    const { result, rerender } = mount({ filename: "A.pdf" });
+    await flush();
+
+    rerender({ chatId: "c1", filename: "B.pdf", active: true, refreshKey: "" });
+    await flush();
+    await act(async () => resolveA());
+
+    expect(result.current.data.nodes[0].label).toBe("Concept of B");
+  });
+
+  it("an error for one document is not shown for the next", async () => {
+    svc.getGraph.mockImplementation((chat, { filename }) =>
+      filename === "A.pdf"
+        ? Promise.reject(err("not_found"))
+        : Promise.resolve(graphFor("B.pdf", "Concept of B"))
+    );
+    const { result, rerender } = mount({ filename: "A.pdf" });
+    await flush();
+    expect(result.current.error.code).toBe("not_found");
+
+    rerender({ chatId: "c1", filename: "B.pdf", active: true, refreshKey: "" });
+    expect(result.current.error).toBeNull();
+    await flush();
+    expect(result.current.data.nodes[0].label).toBe("Concept of B");
+  });
+
+  it("only the selected PDF's indexing counts as 'indexing'", async () => {
+    svc.getGraph.mockResolvedValue(graphOf([doc("A.pdf", "COMPLETED")]));
+    svc.getIndexingJobs.mockResolvedValue([
+      { filename: "B.pdf", status: "WAITING" }, // another PDF is still being indexed
+    ]);
+    const { result } = mount({ filename: "A.pdf" });
+    await flush();
+
+    expect(result.current.indexing).toBe(false);
   });
 });

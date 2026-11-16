@@ -33,6 +33,28 @@
   font-size: var(--font-h4);
 }
 
+.mindmap-doc-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 320px;
+
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mindmap-doc-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mindmap-doc-title svg {
+  flex-shrink: 0;
+}
+
 .mindmap-stats {
   font-size: var(--font-xs);
   color: var(--text-faint);
@@ -297,6 +319,41 @@
 
 .mindmap-doc.status-failed .mindmap-doc-status {
   color: var(--danger);
+}
+
+/* A document the user can choose (the "Select a document" state). */
+.mindmap-doc-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  width: 100%;
+  min-height: 32px;
+  padding: 0;
+
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mindmap-doc-pick span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mindmap-doc-pick svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.mindmap-doc:has(.mindmap-doc-pick):hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-color-hover);
 }
 
 .mindmap-doc-error {

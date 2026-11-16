@@ -75,7 +75,7 @@ const err = (code, message = code) => Object.assign(new Error(message), { code }
 function renderPanel(props = {}) {
   const handlers = { onOpenSource: vi.fn(), onGoToChat: vi.fn() };
   const view = render(
-    <MindMapPanel chatId="c1" active refreshKey="k" {...handlers} {...props} />
+    <MindMapPanel chatId="c1" filename="Bio.pdf" files={["Bio.pdf", "Cells.pdf"]} active refreshKey="k" {...handlers} {...props} />
   );
   return { ...handlers, ...view };
 }
@@ -88,9 +88,14 @@ beforeEach(() => {
 
 describe("MindMapPanel: wiring", () => {
   it("passes chat, active flag and refresh key to the hook", () => {
-    renderPanel({ chatId: "chat-42", active: false, refreshKey: "x|y" });
+    renderPanel({ chatId: "chat-42", filename: "Cells.pdf", active: false, refreshKey: "x|y" });
 
-    expect(hook.useKnowledgeGraph).toHaveBeenCalledWith({ chatId: "chat-42", active: false, refreshKey: "x|y" });
+    expect(hook.useKnowledgeGraph).toHaveBeenCalledWith({
+      chatId: "chat-42",
+      filename: "Cells.pdf",
+      active: false,
+      refreshKey: "x|y",
+    });
   });
 
   it("Refresh asks the hook to reload", () => {
@@ -290,6 +295,50 @@ describe("MindMapPanel: states", () => {
   });
 });
 
+describe("MindMapPanel: one document at a time", () => {
+  it("shows which document the graph belongs to", async () => {
+    setHook({ data: readyData() });
+    renderPanel({ filename: "Bio.pdf" });
+
+    expect(await screen.findByTitle("Bio.pdf")).toHaveTextContent("Bio.pdf");
+  });
+
+  it("'All Documents' (no document): asks the user to choose and shows no graph", () => {
+    setHook({ data: readyData() }); // even if some graph were around, it must not be shown
+    renderPanel({ filename: null });
+
+    expect(screen.getByRole("heading", { name: "Select a document" })).toBeInTheDocument();
+    expect(screen.queryByTestId("canvas")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 concepts · 1 connection")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument(); // not a loading state either
+  });
+
+  it("lists the chat's PDFs and selecting one reports it", () => {
+    const onSelectDocument = vi.fn();
+    renderPanel({ filename: null, onSelectDocument });
+
+    const pdfs = within(screen.getByRole("list")).getAllByRole("button");
+    expect(pdfs.map((b) => b.textContent)).toEqual(["Bio.pdf", "Cells.pdf"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cells.pdf" }));
+    expect(onSelectDocument).toHaveBeenCalledWith("Cells.pdf");
+  });
+
+  it("'All Documents' with no PDFs uploaded shows the normal empty state", () => {
+    renderPanel({ filename: null, files: [] });
+
+    expect(screen.getByRole("heading", { name: "No mind map yet" })).toBeInTheDocument();
+  });
+
+  it("does not offer 'Select a document' while a document is selected", async () => {
+    setHook({ data: readyData() });
+    renderPanel();
+
+    await screen.findByTestId("canvas");
+    expect(screen.queryByRole("heading", { name: "Select a document" })).not.toBeInTheDocument();
+  });
+});
+
 describe("MindMapPanel: selecting concepts", () => {
   beforeEach(() => setHook({ data: readyData() }));
 
@@ -367,7 +416,7 @@ describe("MindMapPanel: selecting concepts", () => {
     fireEvent.click(await screen.findByText("node:Cell"));
 
     setHook({ data: { ...readyData(), nodes: [nodes[1]], edges: [] } });
-    rerender(<MindMapPanel chatId="c1" active refreshKey="k" onOpenSource={vi.fn()} />);
+    rerender(<MindMapPanel chatId="c1" filename="Bio.pdf" files={["Bio.pdf"]} active refreshKey="k" onOpenSource={vi.fn()} />);
 
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
@@ -377,7 +426,7 @@ describe("MindMapPanel: selecting concepts", () => {
     fireEvent.click(await screen.findByText("node:Cell"));
 
     setHook({ data: readyData() });
-    rerender(<MindMapPanel chatId="c1" active refreshKey="k2" onOpenSource={vi.fn()} />);
+    rerender(<MindMapPanel chatId="c1" filename="Bio.pdf" files={["Bio.pdf"]} active refreshKey="k2" onOpenSource={vi.fn()} />);
 
     expect(screen.getByRole("complementary", { name: "Details for Cell" })).toBeInTheDocument();
   });
