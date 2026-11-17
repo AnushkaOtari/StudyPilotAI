@@ -25,8 +25,7 @@ from citation_test_support import (
 
 # Install mocks BEFORE importing the RAG modules.
 install_stubs()
-
-from backend.rag import rag_pipeline as rp
+from rag import rag_pipeline as rp
 from rag import qa
 from rag.citations import (
     assign_source_refs,

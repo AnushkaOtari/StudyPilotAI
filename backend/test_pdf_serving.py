@@ -105,13 +105,23 @@ def test_deleted_pdf_is_no_longer_served(env):
     assert get(env, "Companies.pdf", "c1").status_code == 404
 
 
-@pytest.mark.skipif(not hasattr(os, "symlink"), reason="symlinks unavailable")
 def test_symlink_pointing_outside_the_chat_folder_is_not_served(env):
     env.upload("c1", "Companies.pdf", COMPANY)
+
     outside = env.tmp / "outside.pdf"
     outside.write_bytes(b"%PDF-1.4 outside")
+
     link = env.tmp / "uploads" / "user_1" / "chat_c1" / "Link.pdf"
-    os.symlink(outside, link)
+
+    try:
+        os.symlink(outside, link)
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314:
+            pytest.skip(f"Windows symlink privilege unavailable: {exc}")
+        raise
+    except NotImplementedError as exc:
+        pytest.skip(f"Symlinks unavailable: {exc}")
+
     assert get(env, "Link.pdf", "c1").status_code == 404
 
 
